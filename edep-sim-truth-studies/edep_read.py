@@ -94,9 +94,9 @@ data_particles = {
 }
 
 root_dir = '../input-root-files/EDEP-SIM/'
-root_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.root')]
+# root_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.root')]
 # root_files = ["../input-root-files/EDEP-SIM/MicroProdN3p4_NDLAr_2E18_FHC.edep.nu.0000001.EDEPSIM.root"]
-# root_files = os.path.join(root_dir,"MicroProdN3p4_NDLAr_2E18_FHC.edep.nu.0000001.EDEPSIM.root")
+root_files = [os.path.join(root_dir, "MicroProdN3p4_NDLAr_2E18_FHC.edep.nu.0000001.EDEPSIM.root")]
 energy_deposit_by_key = {}
 track_length_by_key = {}
 parent_to_tracks = {}
