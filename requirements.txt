@@ -1,0 +1,6 @@
+root
+pandas
+matplotlib
+particle
+numpy
+uproot
