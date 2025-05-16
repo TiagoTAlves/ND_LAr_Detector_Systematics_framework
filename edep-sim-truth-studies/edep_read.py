@@ -20,12 +20,12 @@ def pdg_to_particle_mass(pdg_code):
         return 0
 
 def calc_distance_to_wall(x, y, z, theta, phi):
-    nd_wall_x_min = -350
-    nd_wall_x_max = 350
-    nd_wall_y_min = -220
-    nd_wall_y_max = 130
-    nd_wall_z_min = 415
-    nd_wall_z_max = 925
+    nd_wall_x_min = -3500
+    nd_wall_x_max = 4000
+    nd_wall_y_min = -2182
+    nd_wall_y_max = 1242
+    nd_wall_z_min = 4158 
+    nd_wall_z_max = 9182
 
     epsilon = 1e-8
     cos_phi = np.cos(phi)
@@ -43,6 +43,14 @@ def calc_distance_to_wall(x, y, z, theta, phi):
     ]
     positive_distances = [d for d in distances if d > 0]
     return min(positive_distances) if positive_distances else float('inf')
+
+def calc_distance_to_wall_TMS(x, y, z, theta, phi):
+    nd_wall_x_min = -3518
+    nd_wall_x_max = 3518
+    nd_wall_y_min = -3863
+    nd_wall_y_max = 1158
+    nd_wall_z_min = 11348 
+    nd_wall_z_max = 18318
 
 def update_parent_to_tracks(traj, parent_to_tracks):
     parent_id = traj.GetParentId()
@@ -94,9 +102,8 @@ data_particles = {
 }
 
 root_dir = '../input-root-files/EDEP-SIM/'
-# root_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.root')]
-# root_files = ["../input-root-files/EDEP-SIM/MicroProdN3p4_NDLAr_2E18_FHC.edep.nu.0000001.EDEPSIM.root"]
-root_files = [os.path.join(root_dir, "MicroProdN3p4_NDLAr_2E18_FHC.edep.nu.0000001.EDEPSIM.root")]
+root_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.root')]
+# root_files = [os.path.join(root_dir, "MicroProdN3p4_NDLAr_2E18_FHC.edep.nu.0000001.EDEPSIM.root")]
 energy_deposit_by_key = {}
 track_length_by_key = {}
 parent_to_tracks = {}
@@ -235,7 +242,7 @@ for pdg in particle_species:
                     df_cut = df_pdg[cut]
                     if len(df_cut) == 0:
                         continue
-                    ratio = df_cut['E_vis'] / df_cut['E_kin']
+                    ratio = df_cut['E_vis'] / df_cut['E']
                     plt.figure(figsize=(6,4))
                     plt.hist(ratio, bins=50, range=(0,1.2), histtype='step', color='blue')
                     plt.xlabel('E_vis / E')

@@ -1,3 +1,4 @@
 *.root
 *.png
 edep-sim-truth-studies/edep-sim/
+.vscode/
