@@ -47,7 +47,8 @@ data_particles = {
     "track_length_muTag": [],
     "track_length": [],
     "d_wall_TPC": [],
-    "is_contained": [],
+    "is_contained_TPC": [],
+    "is_contained_TMS": [],
 }
 
 energy_deposit_by_key = {}
@@ -135,7 +136,8 @@ for root_file in root_files:
                 data_particles["track_length"].append(
                     sum(track_length_sums[k] for k in track_length_sums)
                 )
-                data_particles["is_contained"].append(1 if calc_distance_to_wall(x, y, z, theta, phi, detector="TPC") > track_length_sums["track_length_TPC"] else 0)
+                data_particles["is_contained_TPC"].append(is_contained(x, y, z, theta, phi, detector="TPC"))
+                data_particles["is_contained_TMS"].append(is_contained(x, y, z, theta, phi, detector="TMS"))
 
     parent_to_tracks.clear()
     energy_deposit_by_key.clear()

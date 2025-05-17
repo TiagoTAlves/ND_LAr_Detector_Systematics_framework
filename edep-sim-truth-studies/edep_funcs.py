@@ -57,9 +57,9 @@ def inner(x, y, z, detector="TPC"):
 
 def is_contained(x, y, z, theta, phi, track_length, detector="TPC"):
     if not inner(x, y, z, detector):
-        return False
+        return 0
     d_wall = calc_distance_to_wall(x, y, z, theta, phi, detector)
-    return track_length <= d_wall
+    return 1 if track_length <= d_wall else 0
 
 def update_parent_to_tracks(traj, parent_to_tracks):
     parent_id = traj.GetParentId()
