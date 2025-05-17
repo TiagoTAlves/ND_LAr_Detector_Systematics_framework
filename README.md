@@ -60,7 +60,13 @@ This both clones the EDep-Sim repo and builds it so that reading EDep-Sim files 
 $ python3 edep_read.py
 ```
 
-For now, if you run it as is, it will create 2 directories within edep-sim-truth-studies; plots and outputs.
+And then to plot:
+
+```bash
+$ python3 edep_plotting.py
+```
+
+For now, if you run both functions as is, it will create 2 directories within edep-sim-truth-studies; plots and outputs.
 
 The `plots/` directory will eventually be discontinued but for now gives us a tool to make changes whilst these tools are still in development. The `outputs/` diretory will deposit the output directory file. For now the output files will be written over each other so if there is a file you would like, please rename it in the python script or after creating it.
 
