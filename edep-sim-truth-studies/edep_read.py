@@ -1,8 +1,6 @@
 import ROOT
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
-from particle import Particle
 import numpy as np
 import uproot
 from edep_funcs import (
@@ -21,6 +19,12 @@ ROOT.gInterpreter.ProcessLine('#include "./edep-sim/edep-gcc-11-x86_64-redhat-li
 
 root_dir = '../input-root-files/EDEP-SIM/'
 root_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.root')]
+
+detectors = [
+    (b'TPCActive_shape', "E_vis_TPC", "track_length_TPC"),
+    (b'volTMS', "E_vis_TMS", "track_length_TMS"),
+    (b'muTag', "E_vis_muTag", "track_length_muTag")
+]
 
 data_particles = {
     "run_id": [],
@@ -49,6 +53,7 @@ data_particles = {
     "d_wall_TPC": [],
     "is_contained_TPC": [],
     "is_contained_TMS": [],
+    "is_contained": []
 }
 
 energy_deposit_by_key = {}
@@ -96,12 +101,6 @@ for root_file in root_files:
                 theta = particle.GetMomentum().Theta()
                 phi = np.arcsin(py/p) if p != 0 else 0
 
-                detectors = [
-                    (b'TPCActive_shape', "E_vis_TPC", "track_length_TPC"),
-                    (b'volTMS', "E_vis_TMS", "track_length_TMS"),
-                    (b'muTag', "E_vis_muTag", "track_length_muTag")
-                ]
-
                 energy_sums = {}
                 track_length_sums = {}
                 for det, ekey, tkey in detectors:
@@ -136,8 +135,12 @@ for root_file in root_files:
                 data_particles["track_length"].append(
                     sum(track_length_sums[k] for k in track_length_sums)
                 )
-                data_particles["is_contained_TPC"].append(is_contained(x, y, z, theta, phi, detector="TPC"))
-                data_particles["is_contained_TMS"].append(is_contained(x, y, z, theta, phi, detector="TMS"))
+                data_particles["is_contained_TPC"].append(is_contained(x, y, z, theta, phi, track_length_sums["track_length_TPC"], detector="TPC"))
+                data_particles["is_contained_TMS"].append(is_contained(x, y, z, theta, phi, track_length_sums["track_length_TMS"], detector="TMS"))
+                data_particles["is_contained"].append(
+                    is_contained(x, y, z, theta, phi, track_length_sums["track_length_TPC"], detector="TPC") or
+                    is_contained(x, y, z, theta, phi, track_length_sums["track_length_TMS"], detector="TMS")
+                )
 
     parent_to_tracks.clear()
     energy_deposit_by_key.clear()
