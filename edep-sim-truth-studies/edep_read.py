@@ -11,7 +11,9 @@ from edep_funcs import (
     ND_WALLS,
     sum_by_keys,
     accumulate_energy_deposit,
-    accumulate_track_length
+    accumulate_track_length,
+    stop_position,
+    is_contained_TMS_matching
 )
 
 ROOT.gSystem.Load("./edep-sim/edep-gcc-11-x86_64-redhat-linux/io/libedepsim_io.so")
@@ -37,9 +39,12 @@ data_particles = {
     "E_vis": [],
     "E": [],
     "E_kin": [],
-    "x": [],
-    "y": [],
-    "z": [],
+    "start_x": [],
+    "start_y": [],
+    "start_z": [],
+    "stop_x": [],
+    "stop_y": [],
+    "stop_z": [],
     "px": [],
     "py": [],
     "pz": [],
@@ -52,13 +57,16 @@ data_particles = {
     "track_length": [],
     "d_wall_TPC": [],
     "is_contained_TPC": [],
-    "is_contained_TMS": [],
+    "is_contained_TMS_matching": [],
     "is_contained": []
 }
 
 energy_deposit_by_key = {}
 track_length_by_key = {}
 parent_to_tracks = {}
+stop_pos = {}
+is_all_contained_TPC = {}
+is_contained_TMS_matched = {}
 
 for root_file in root_files:
 
@@ -74,6 +82,7 @@ for root_file in root_files:
         
         for traj in event.Trajectories:
             update_parent_to_tracks(traj, parent_to_tracks)
+            stop_pos[i,traj.GetTrackId()] = stop_position(traj, traj.GetTrackId())
 
         for segments in event.SegmentDetectors:
             if not hasattr(segments, 'second'):
@@ -100,6 +109,18 @@ for root_file in root_files:
                 p = particle.GetMomentum().P()
                 theta = particle.GetMomentum().Theta()
                 phi = np.arcsin(py/p) if p != 0 else 0
+                
+                is_all_contained_TPC[track_id] = 1
+                is_contained_TMS_matched[track_id] = 0
+                for tid in all_tracks:
+                    if not is_contained(x, y, z, stop_pos, i, tid, detector="TPC"):
+                        is_all_contained_TPC[track_id] = 0
+                        if is_contained_TMS_matching(x, y, z, stop_pos, i, tid, detector="TMS") or energy_deposit_by_key.get((i, tid, b'volTMS'), 0) > 0:
+                            is_contained_TMS_matched[track_id] = 1
+                            break
+                        else:
+                            continue
+                    
 
                 energy_sums = {}
                 track_length_sums = {}
@@ -111,9 +132,12 @@ for root_file in root_files:
                 data_particles["interaction_id"].append(interaction_id)
                 data_particles["track_id"].append(track_id)
                 data_particles["pdg"].append(pdg)
-                data_particles["x"].append(x)
-                data_particles["y"].append(y)
-                data_particles["z"].append(z)
+                data_particles["start_x"].append(x)
+                data_particles["start_y"].append(y)
+                data_particles["start_z"].append(z)
+                data_particles["stop_x"].append(stop_pos[i, track_id][0])
+                data_particles["stop_y"].append(stop_pos[i, track_id][1])
+                data_particles["stop_z"].append(stop_pos[i, track_id][2])
                 data_particles["px"].append(px)
                 data_particles["py"].append(py)
                 data_particles["pz"].append(pz)
@@ -135,16 +159,16 @@ for root_file in root_files:
                 data_particles["track_length"].append(
                     sum(track_length_sums[k] for k in track_length_sums)
                 )
-                data_particles["is_contained_TPC"].append(is_contained(x, y, z, theta, phi, track_length_sums["track_length_TPC"], detector="TPC"))
-                data_particles["is_contained_TMS"].append(is_contained(x, y, z, theta, phi, track_length_sums["track_length_TMS"], detector="TMS"))
-                data_particles["is_contained"].append(
-                    is_contained(x, y, z, theta, phi, track_length_sums["track_length_TPC"], detector="TPC") or
-                    is_contained(x, y, z, theta, phi, track_length_sums["track_length_TMS"], detector="TMS")
-                )
+                data_particles["is_contained_TPC"].append(is_all_contained_TPC[track_id])
+                data_particles["is_contained_TMS_matching"].append(is_contained_TMS_matched[track_id])
+                data_particles["is_contained"].append(1 if is_all_contained_TPC[track_id] == 1 or is_contained_TMS_matched[track_id] == 1 else 0)
 
     parent_to_tracks.clear()
     energy_deposit_by_key.clear()
     track_length_by_key.clear()
+    stop_pos.clear()
+    is_all_contained_TPC.clear()
+    is_contained_TMS_matched.clear()
 
 df = pd.DataFrame(data_particles)
 
@@ -154,8 +178,6 @@ os.makedirs("plots", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 with uproot.recreate("outputs/edep_sim_output.root") as f:
     f["events"] = df.reset_index()
-
-
 
 print(df.head(15))
 

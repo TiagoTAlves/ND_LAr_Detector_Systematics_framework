@@ -48,9 +48,9 @@ def plot_evis_over_ekin(df):
                     for zmin, zmax in z_bins:
                         cut = (
                             (df_pdg['theta'] >= tmin) & (df_pdg['theta'] < tmax) &
-                            (df_pdg['x'] >= xmin) & (df_pdg['x'] < xmax) &
-                            (df_pdg['y'] >= ymin) & (df_pdg['y'] < ymax) &
-                            (df_pdg['z'] >= zmin) & (df_pdg['z'] < zmax)
+                            (df_pdg['start_x'] >= xmin) & (df_pdg['start_x'] < xmax) &
+                            (df_pdg['start_y'] >= ymin) & (df_pdg['start_y'] < ymax) &
+                            (df_pdg['start_z'] >= zmin) & (df_pdg['start_z'] < zmax)
                         )
                         df_cut = df_pdg[cut]
                         if len(df_cut) == 0:
@@ -87,9 +87,9 @@ def plot_evis_over_etrue(df):
                     for zmin, zmax in z_bins:
                         cut = (
                             (df_pdg['theta'] >= tmin) & (df_pdg['theta'] < tmax) &
-                            (df_pdg['x'] >= xmin) & (df_pdg['x'] < xmax) &
-                            (df_pdg['y'] >= ymin) & (df_pdg['y'] < ymax) &
-                            (df_pdg['z'] >= zmin) & (df_pdg['z'] < zmax)
+                            (df_pdg['start_x'] >= xmin) & (df_pdg['start_x'] < xmax) &
+                            (df_pdg['start_y'] >= ymin) & (df_pdg['start_y'] < ymax) &
+                            (df_pdg['start_z'] >= zmin) & (df_pdg['start_z'] < zmax)
                         )
                         df_cut = df_pdg[cut]
                         if len(df_cut) == 0:
@@ -116,7 +116,6 @@ def plot_evis_over_etrue_not_contained(df):
     for pdg in particle_species:
         df_pdg = df[df['pdg'] == pdg]
         cut = (
-            (df_pdg['is_contained_TPC'] == 0) &
             (df_pdg['is_contained'] == 0) &
             (df_pdg['E_vis'] > 0) 
         )

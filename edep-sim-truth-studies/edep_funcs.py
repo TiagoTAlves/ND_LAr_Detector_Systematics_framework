@@ -1,22 +1,22 @@
 import numpy as np
 from particle import Particle
 
-ND_WALLS = {
+ND_WALLS = { # numbers from: https://github.com/DUNE/dune-tms/blob/main/config/TMS_Default_Config.toml 
     "TPC": {
-        "x_min": -3500,
-        "x_max": 4000,
-        "y_min": -2182,
-        "y_max": 1242,
-        "z_min": 4158,
-        "z_max": 9182,
+        "x_min": -3478.48,
+        "x_max": 3478.48,
+        "y_min": -2166.71,
+        "y_max": 829.282,
+        "z_min": 4179.24,
+        "z_max": 9135.88,
     },
     "TMS": {
-        "x_min": -3518,
-        "x_max": 3518,
-        "y_min": -3863,
-        "y_max": 1158,
-        "z_min": 11348,
-        "z_max": 18318,
+        "x_min": -3300,
+        "x_max": 3300,
+        "y_min": -2850,
+        "y_max": 160,
+        "z_min": 11362,
+        "z_max": 18314,
     }
 }
 
@@ -55,11 +55,37 @@ def inner(x, y, z, detector="TPC"):
             walls["y_min"] <= y <= walls["y_max"] and
             walls["z_min"] <= z <= walls["z_max"])
 
-def is_contained(x, y, z, theta, phi, track_length, detector="TPC"):
-    if not inner(x, y, z, detector):
+def stop_position(traj, track_id):
+    if traj.GetTrackId() != track_id:
+        return None
+    stop_pos = None
+    for point in traj.Points:
+        pos = point.GetPosition()
+        stop_pos = (pos.X(), pos.Y(), pos.Z())
+    return stop_pos
+
+def is_contained(x, y, z, stop_pos, i, track_id, detector="TPC"):
+    walls = ND_WALLS[detector]
+    stop_pos = stop_pos[i, track_id]
+    if (walls["x_min"] <= x <= walls["x_max"] and
+        walls["y_min"] <= y <= walls["y_max"] and
+        walls["z_min"] <= z <= walls["z_max"] and
+        walls["x_min"] <= stop_pos[0] <= walls["x_max"] and
+        walls["y_min"] <= stop_pos[1] <= walls["y_max"] and
+        walls["z_min"] <= stop_pos[2] <= walls["z_max"]):
+        return 1
+    else:
         return 0
-    d_wall = calc_distance_to_wall(x, y, z, theta, phi, detector)
-    return 1 if track_length <= d_wall else 0
+
+def is_contained_TMS_matching(x, y, z, stop_pos, i, track_id, detector="TMS"):
+    walls = ND_WALLS[detector]
+    stop_pos = stop_pos[i, track_id]
+    if (walls["x_min"] <= stop_pos[0] <= walls["x_max"] and
+        walls["y_min"] <= stop_pos[1] <= walls["y_max"] and
+        walls["z_min"] <= stop_pos[2] <= walls["z_max"]):
+        return 1
+    else:
+        return 0
 
 def update_parent_to_tracks(traj, parent_to_tracks):
     parent_id = traj.GetParentId()
