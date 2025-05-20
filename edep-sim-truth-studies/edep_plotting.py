@@ -131,7 +131,7 @@ def plot_evis_over_etrue_not_contained(df):
         plt.tight_layout()
         fname = os.path.join(
             output_dir,
-            f"hist_evis_over_etrue_notcontained_{pdg_code_to_name(pdg)}.png"
+            f"{pdg_code_to_name(pdg)}_hist_evis_over_etrue_notcontained.png"
         )
         plt.savefig(fname)
         plt.close()
@@ -144,7 +144,7 @@ def plot_evis_over_etrue_contained(df):
     for pdg in particle_species:
         df_pdg = df[df['pdg'] == pdg]
         cut = (
-            (df_pdg['is_contained_TPC'] == 1) &
+            (df_pdg['is_contained'] == 1) &
             (df_pdg['E_vis'] > 0) 
         )
         df_cut = df_pdg[cut]
@@ -159,7 +159,63 @@ def plot_evis_over_etrue_contained(df):
         plt.tight_layout()
         fname = os.path.join(
             output_dir,
-            f"hist_evis_over_etrue_contained_{pdg_code_to_name(pdg)}.png"
+            f"{pdg_code_to_name(pdg)}_hist_evis_over_etrue_contained.png"
+        )
+        plt.savefig(fname)
+        plt.close()
+
+def plot_evis_over_ekin_contained(df):
+    particle_species = df['pdg'].unique()
+
+    output_dir = get_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    for pdg in particle_species:
+        df_pdg = df[df['pdg'] == pdg]
+        cut = (
+            (df_pdg['is_contained_TPC'] == 1) &
+            (df_pdg['E_vis'] > 0) 
+        )
+        df_cut = df_pdg[cut]
+        if len(df_cut) == 0:
+            continue
+        ratio = df_cut['E_vis'] / df_cut['E_kin']
+        plt.figure(figsize=(6,4))
+        plt.hist(ratio, bins=50, range=(0,1.2), histtype='step', color='red')
+        plt.xlabel('E_vis / Ekin (contained)')
+        plt.ylabel('Counts')
+        plt.title(f'{pdg_code_to_name(pdg)}, contained')
+        plt.tight_layout()
+        fname = os.path.join(
+            output_dir,
+            f"{pdg_code_to_name(pdg)}_hist_evis_over_ekin_contained.png"
+        )
+        plt.savefig(fname)
+        plt.close()
+
+def plot_evis_over_ekin_not_contained(df):
+    particle_species = df['pdg'].unique()
+
+    output_dir = get_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    for pdg in particle_species:
+        df_pdg = df[df['pdg'] == pdg]
+        cut = (
+            (df_pdg['is_contained_TPC'] == 0) &
+            (df_pdg['E_vis'] > 0) 
+        )
+        df_cut = df_pdg[cut]
+        if len(df_cut) == 0:
+            continue
+        ratio = df_cut['E_vis'] / df_cut['E_kin']
+        plt.figure(figsize=(6,4))
+        plt.hist(ratio, bins=50, range=(0,1.2), histtype='step', color='red')
+        plt.xlabel('E_vis / Ekin (contained)')
+        plt.ylabel('Counts')
+        plt.title(f'{pdg_code_to_name(pdg)}, contained')
+        plt.tight_layout()
+        fname = os.path.join(
+            output_dir,
+            f"{pdg_code_to_name(pdg)}_hist_evis_over_ekin_contained.png"
         )
         plt.savefig(fname)
         plt.close()
@@ -170,4 +226,6 @@ if __name__ == "__main__":
     plot_evis_over_etrue(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
     plot_evis_over_etrue_not_contained(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
     plot_evis_over_etrue_contained(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
+    plot_evis_over_ekin_contained(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
+    plot_evis_over_ekin_not_contained(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
     pass

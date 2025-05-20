@@ -66,23 +66,27 @@ def stop_position(traj, track_id):
 
 def is_contained(x, y, z, stop_pos, i, track_id, detector="TPC"):
     walls = ND_WALLS[detector]
-    stop_pos = stop_pos[i, track_id]
+    stop = stop_pos.get((i, track_id))
+    if stop is None:
+        return 0
     if (walls["x_min"] <= x <= walls["x_max"] and
         walls["y_min"] <= y <= walls["y_max"] and
         walls["z_min"] <= z <= walls["z_max"] and
-        walls["x_min"] <= stop_pos[0] <= walls["x_max"] and
-        walls["y_min"] <= stop_pos[1] <= walls["y_max"] and
-        walls["z_min"] <= stop_pos[2] <= walls["z_max"]):
+        walls["x_min"] <= stop[0] <= walls["x_max"] and
+        walls["y_min"] <= stop[1] <= walls["y_max"] and
+        walls["z_min"] <= stop[2] <= walls["z_max"]):
         return 1
     else:
         return 0
 
-def is_contained_TMS_matching(x, y, z, stop_pos, i, track_id, detector="TMS"):
+def is_contained_TMS_matching(stop_pos, i, track_id, detector="TMS"):
     walls = ND_WALLS[detector]
-    stop_pos = stop_pos[i, track_id]
-    if (walls["x_min"] <= stop_pos[0] <= walls["x_max"] and
-        walls["y_min"] <= stop_pos[1] <= walls["y_max"] and
-        walls["z_min"] <= stop_pos[2] <= walls["z_max"]):
+    stop = stop_pos.get((i, track_id))
+    if stop is None:
+        return 0
+    if (walls["x_min"] <= stop[0] <= walls["x_max"] and
+        walls["y_min"] <= stop[1] <= walls["y_max"] and
+        walls["z_min"] <= stop[2] <= walls["z_max"]):
         return 1
     else:
         return 0
@@ -90,6 +94,9 @@ def is_contained_TMS_matching(x, y, z, stop_pos, i, track_id, detector="TMS"):
 def update_parent_to_tracks(traj, parent_to_tracks):
     parent_id = traj.GetParentId()
     track_id = traj.GetTrackId()
+    pdg = traj.GetPDGCode()
+    if pdg in {12, 14, 16, -12, -14, -16}:
+        return
     if parent_id == -1:
         parent_to_tracks[track_id] = [track_id]
         if track_id not in parent_to_tracks:
@@ -108,11 +115,11 @@ def update_parent_to_tracks(traj, parent_to_tracks):
 def sum_by_keys(keys, data_dict, all_tracks):
     return sum(data_dict.get((i, tid, det), 0) for tid in all_tracks for det in keys)
 
-def accumulate_energy_deposit(segments, event_idx, energy_deposit_by_key):
+def accumulate_energy_deposit(segments, tid, energy_deposit_by_key):
     detector_id = segments.first
     for seg in segments.second:
         energy_deposit = seg.GetEnergyDeposit()
-        key = (event_idx, seg.GetPrimaryId(), detector_id)
+        key = (tid, seg.GetPrimaryId(), detector_id)
         energy_deposit_by_key[key] = energy_deposit_by_key.get(key, 0) + energy_deposit
 
 def accumulate_track_length(segments, event_idx, track_length_by_key):
@@ -121,3 +128,14 @@ def accumulate_track_length(segments, event_idx, track_length_by_key):
         track_length = seg.GetTrackLength()
         key = (event_idx, seg.GetPrimaryId(), detector_id)
         track_length_by_key[key] = track_length_by_key.get(key, 0) + track_length
+
+def containment(all_tracks, track_id, energy_deposit_by_key, stop_pos, i, x, y, z, is_all_contained_TPC, is_contained_TMS_matched):
+    for tid in all_tracks:
+        if not is_contained(x, y, z, stop_pos, i, tid, detector="TPC"):
+            is_all_contained_TPC[track_id] = 0
+            if is_contained_TMS_matching(stop_pos, i, tid, detector="TMS") or energy_deposit_by_key.get((i, tid, b'volTMS'), 0) > 0:
+                is_contained_TMS_matched[track_id] = 1
+                break
+            else:
+                continue
+    return is_all_contained_TPC[track_id], is_contained_TMS_matched[track_id]

@@ -13,7 +13,8 @@ from edep_funcs import (
     accumulate_energy_deposit,
     accumulate_track_length,
     stop_position,
-    is_contained_TMS_matching
+    is_contained_TMS_matching,
+    containment
 )
 
 ROOT.gSystem.Load("./edep-sim/edep-gcc-11-x86_64-redhat-linux/io/libedepsim_io.so")
@@ -83,7 +84,7 @@ for root_file in root_files:
         for traj in event.Trajectories:
             update_parent_to_tracks(traj, parent_to_tracks)
             stop_pos[i,traj.GetTrackId()] = stop_position(traj, traj.GetTrackId())
-
+        
         for segments in event.SegmentDetectors:
             if not hasattr(segments, 'second'):
                 continue
@@ -112,15 +113,7 @@ for root_file in root_files:
                 
                 is_all_contained_TPC[track_id] = 1
                 is_contained_TMS_matched[track_id] = 0
-                for tid in all_tracks:
-                    if not is_contained(x, y, z, stop_pos, i, tid, detector="TPC"):
-                        is_all_contained_TPC[track_id] = 0
-                        if is_contained_TMS_matching(x, y, z, stop_pos, i, tid, detector="TMS") or energy_deposit_by_key.get((i, tid, b'volTMS'), 0) > 0:
-                            is_contained_TMS_matched[track_id] = 1
-                            break
-                        else:
-                            continue
-                    
+                containment(all_tracks, track_id, energy_deposit_by_key, stop_pos, i, x, y, z, is_all_contained_TPC, is_contained_TMS_matched)
 
                 energy_sums = {}
                 track_length_sums = {}
@@ -178,6 +171,3 @@ os.makedirs("plots", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 with uproot.recreate("outputs/edep_sim_output.root") as f:
     f["events"] = df.reset_index()
-
-print(df.head(15))
-
