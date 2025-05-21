@@ -119,7 +119,7 @@ for root_file in root_files:
                 track_length_sums = {}
                 for det, ekey, tkey in detectors:
                     energy_sums[ekey] = sum(energy_deposit_by_key.get((i, tid, det), 0) for tid in all_tracks)
-                    track_length_sums[tkey] = sum(track_length_by_key.get((i, tid, det), 0) for tid in all_tracks)
+                    track_length_sums[tkey] = sum(track_length_by_key.get((i, track_id, det), 0) for tid in all_tracks)
                 
                 data_particles["run_id"].append(run_id)
                 data_particles["interaction_id"].append(interaction_id)

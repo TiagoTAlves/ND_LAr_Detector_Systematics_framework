@@ -116,7 +116,7 @@ def plot_evis_over_etrue_not_contained(df):
     for pdg in particle_species:
         df_pdg = df[df['pdg'] == pdg]
         cut = (
-            (df_pdg['is_contained'] == 0) &
+            (df_pdg['is_contained_TPC'] == 0) &
             (df_pdg['E_vis'] > 0) 
         )
         df_cut = df_pdg[cut]
@@ -124,7 +124,7 @@ def plot_evis_over_etrue_not_contained(df):
             continue
         ratio = df_cut['E_vis'] / df_cut['E']
         plt.figure(figsize=(6,4))
-        plt.hist(ratio, bins=50, range=(0,1.2), histtype='step', color='red')
+        plt.hist(ratio, bins=60, range=(0,1.2), histtype='step', color='red')
         plt.xlabel('E_vis / Etrue (not contained)')
         plt.ylabel('Counts')
         plt.title(f'{pdg_code_to_name(pdg)}, not contained')
@@ -144,7 +144,7 @@ def plot_evis_over_etrue_contained(df):
     for pdg in particle_species:
         df_pdg = df[df['pdg'] == pdg]
         cut = (
-            (df_pdg['is_contained'] == 1) &
+            (df_pdg['is_contained_TPC'] == 1) &
             (df_pdg['E_vis'] > 0) 
         )
         df_cut = df_pdg[cut]
@@ -152,7 +152,7 @@ def plot_evis_over_etrue_contained(df):
             continue
         ratio = df_cut['E_vis'] / df_cut['E']
         plt.figure(figsize=(6,4))
-        plt.hist(ratio, bins=50, range=(0,1.2), histtype='step', color='red')
+        plt.hist(ratio, bins=60, range=(0,1.2), histtype='step', color='red')
         plt.xlabel('E_vis / Etrue (contained)')
         plt.ylabel('Counts')
         plt.title(f'{pdg_code_to_name(pdg)}, contained')
@@ -181,7 +181,7 @@ def plot_evis_over_ekin_contained(df):
         ratio = df_cut['E_vis'] / df_cut['E_kin']
         plt.figure(figsize=(6,4))
         plt.hist(ratio, bins=50, range=(0,1.2), histtype='step', color='red')
-        plt.xlabel('E_vis / Ekin (contained)')
+        plt.xlabel('E_vis / Ekin (contained in TPC)')
         plt.ylabel('Counts')
         plt.title(f'{pdg_code_to_name(pdg)}, contained')
         plt.tight_layout()
@@ -209,23 +209,23 @@ def plot_evis_over_ekin_not_contained(df):
         ratio = df_cut['E_vis'] / df_cut['E_kin']
         plt.figure(figsize=(6,4))
         plt.hist(ratio, bins=50, range=(0,1.2), histtype='step', color='red')
-        plt.xlabel('E_vis / Ekin (contained)')
+        plt.xlabel('E_vis / Ekin (not contained in TPC)')
         plt.ylabel('Counts')
-        plt.title(f'{pdg_code_to_name(pdg)}, contained')
+        plt.title(f'{pdg_code_to_name(pdg)}, not contained')
         plt.tight_layout()
         fname = os.path.join(
             output_dir,
-            f"{pdg_code_to_name(pdg)}_hist_evis_over_ekin_contained.png"
+            f"{pdg_code_to_name(pdg)}_hist_evis_over_ekin_not_contained.png"
         )
         plt.savefig(fname)
         plt.close()
 
 if __name__ == "__main__":
     # df = read_edep_sim_output("outputs/edep_sim_output.root")
-    plot_evis_over_ekin(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
-    plot_evis_over_etrue(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
-    plot_evis_over_etrue_not_contained(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
-    plot_evis_over_etrue_contained(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
-    plot_evis_over_ekin_contained(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
-    plot_evis_over_ekin_not_contained(read_edep_sim_output("outputs/edep_sim_output.root", tree_name="events"))
+    # plot_evis_over_ekin(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
+    # plot_evis_over_etrue(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
+    plot_evis_over_etrue_not_contained(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
+    plot_evis_over_etrue_contained(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
+    plot_evis_over_ekin_contained(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
+    plot_evis_over_ekin_not_contained(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
     pass

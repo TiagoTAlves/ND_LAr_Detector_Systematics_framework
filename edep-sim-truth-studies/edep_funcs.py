@@ -95,7 +95,7 @@ def update_parent_to_tracks(traj, parent_to_tracks):
     parent_id = traj.GetParentId()
     track_id = traj.GetTrackId()
     pdg = traj.GetPDGCode()
-    if pdg in {12, 14, 16, -12, -14, -16}:
+    if pdg in {12, 14, 16, -12, -14, -16, 2112, -2112}: # remove invisible(ish) particles
         return
     if parent_id == -1:
         parent_to_tracks[track_id] = [track_id]
@@ -133,7 +133,7 @@ def containment(all_tracks, track_id, energy_deposit_by_key, stop_pos, i, x, y, 
     for tid in all_tracks:
         if not is_contained(x, y, z, stop_pos, i, tid, detector="TPC"):
             is_all_contained_TPC[track_id] = 0
-            if is_contained_TMS_matching(stop_pos, i, tid, detector="TMS") or energy_deposit_by_key.get((i, tid, b'volTMS'), 0) > 0:
+            if is_contained_TMS_matching(stop_pos, i, tid, detector="TMS") or energy_deposit_by_key.get((i, tid, b'volTMS'), 0) > 250: #After conversation with Asa, Track reconstruction requires at least 14 steel hits for reconstruction to work
                 is_contained_TMS_matched[track_id] = 1
                 break
             else:
