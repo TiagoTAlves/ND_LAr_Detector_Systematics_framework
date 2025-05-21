@@ -4,3 +4,4 @@ edep-sim-truth-studies/edep-sim/
 .vscode/
 __pycache__/
 *.txt
+logs/

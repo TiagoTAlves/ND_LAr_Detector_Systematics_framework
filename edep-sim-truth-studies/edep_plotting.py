@@ -3,13 +3,21 @@ import pandas as pd
 import os
 import inspect
 import matplotlib.pyplot as plt
+import glob
 
-def read_edep_sim_output(root_file, tree_name="events"):
-    """Read ROOT file and return a pandas DataFrame."""
-    with uproot.open(root_file) as file:
-        tree = file[tree_name]
-        df = tree.arrays(library="pd")
-    return df
+
+def read_edep_sim_output(root_file_pattern, tree_name="events"):
+    """Read all ROOT files matching the pattern and return a concatenated pandas DataFrame."""
+    dfs = []
+    for root_file in sorted(glob.glob(root_file_pattern)):
+        with uproot.open(root_file) as file:
+            tree = file[tree_name]
+            df = tree.arrays(library="pd")
+            dfs.append(df)
+    if dfs:
+        return pd.concat(dfs, ignore_index=True)
+    else:
+        raise FileNotFoundError(f"No files matched the pattern: {root_file_pattern}")
 
 def get_output_dir():
     """Return the output directory as plots/{calling_function_name}."""
@@ -180,7 +188,7 @@ def plot_evis_over_ekin_contained(df):
             continue
         ratio = df_cut['E_vis'] / df_cut['E_kin']
         plt.figure(figsize=(6,4))
-        plt.hist(ratio, bins=50, range=(0,1.2), histtype='step', color='red')
+        plt.hist(ratio, bins=60, range=(0,1.2), histtype='step', color='red')
         plt.xlabel('E_vis / Ekin (contained in TPC)')
         plt.ylabel('Counts')
         plt.title(f'{pdg_code_to_name(pdg)}, contained')
@@ -208,7 +216,7 @@ def plot_evis_over_ekin_not_contained(df):
             continue
         ratio = df_cut['E_vis'] / df_cut['E_kin']
         plt.figure(figsize=(6,4))
-        plt.hist(ratio, bins=50, range=(0,1.2), histtype='step', color='red')
+        plt.hist(ratio, bins=60, range=(0,1.2), histtype='step', color='red')
         plt.xlabel('E_vis / Ekin (not contained in TPC)')
         plt.ylabel('Counts')
         plt.title(f'{pdg_code_to_name(pdg)}, not contained')
@@ -222,10 +230,10 @@ def plot_evis_over_ekin_not_contained(df):
 
 if __name__ == "__main__":
     # df = read_edep_sim_output("outputs/edep_sim_output.root")
-    # plot_evis_over_ekin(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
-    # plot_evis_over_etrue(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
-    plot_evis_over_etrue_not_contained(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
-    plot_evis_over_etrue_contained(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
-    plot_evis_over_ekin_contained(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
-    plot_evis_over_ekin_not_contained(read_edep_sim_output("outputs/edep_sim_output_1-175.root", tree_name="events"))
+    plot_evis_over_ekin(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_ekin_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_ekin_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
     pass

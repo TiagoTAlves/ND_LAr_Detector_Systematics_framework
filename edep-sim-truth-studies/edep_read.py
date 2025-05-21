@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import uproot
 from edep_funcs import (
+    parse_args,
     calc_distance_to_wall,
     pdg_to_particle_mass,
     update_parent_to_tracks,
@@ -17,11 +18,29 @@ from edep_funcs import (
     containment
 )
 
+chunk_index, chunk_size, interactive = parse_args()
+
 ROOT.gSystem.Load("./edep-sim/edep-gcc-11-x86_64-redhat-linux/io/libedepsim_io.so")
 ROOT.gInterpreter.ProcessLine('#include "./edep-sim/edep-gcc-11-x86_64-redhat-linux/include/EDepSim/TG4Event.h"')
 
-root_dir = '../input-root-files/EDEP-SIM/'
-root_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.root')]
+root_dir = '/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/input-root-files/EDEP-SIM/'
+all_root_files = sorted([os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.root')])
+start_idx = chunk_index * chunk_size
+end_idx = start_idx + chunk_size
+root_files = all_root_files[start_idx:end_idx]
+
+if interactive:
+    print("Interactive mode: processing all ROOT files")
+    root_files = all_root_files
+else:
+    start_idx = chunk_index * chunk_size
+    end_idx = start_idx + chunk_size
+    root_files = all_root_files[start_idx:end_idx]
+    if not root_files:
+        print(f"No ROOT files found for chunk {chunk_index}. Exiting.")
+        exit()
+    print(f"Processing chunk {chunk_index}, files {start_idx} to {end_idx-1}")
+
 
 detectors = [
     (b'TPCActive_shape', "E_vis_TPC", "track_length_TPC"),
@@ -169,5 +188,8 @@ df.set_index(["run_id", "interaction_id", "track_id"], inplace=True, drop=True)
 
 os.makedirs("plots", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
-with uproot.recreate("outputs/edep_sim_output.root") as f:
+if not interactive:
+    os.makedirs("logs", exist_ok=True)
+output_file = f"outputs/edep_sim_output_chunk{chunk_index}.root" if not interactive else "outputs/edep_sim_output_all.root"
+with uproot.recreate(output_file) as f:
     f["events"] = df.reset_index()

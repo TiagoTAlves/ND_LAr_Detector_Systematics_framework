@@ -1,3 +1,5 @@
+import argparse
+import sys
 import numpy as np
 from particle import Particle
 
@@ -19,6 +21,19 @@ ND_WALLS = { # numbers from: https://github.com/DUNE/dune-tms/blob/main/config/T
         "z_max": 18314,
     }
 }
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Process ROOT files in chunks for EDepSim.")
+    parser.add_argument('--chunk', type=int, help='Chunk index to process')
+    parser.add_argument('--chunksize', type=int, default=10, help='Number of files per chunk')
+    args = parser.parse_args()
+
+    # Check if arguments were passed
+    if len(sys.argv) == 1:
+        # Interactive mode
+        return None, None, True
+    else:
+        return args.chunk, args.chunksize, False
 
 def pdg_to_particle_mass(pdg_code):
     try:
