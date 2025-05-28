@@ -5,6 +5,8 @@ import inspect
 import matplotlib.pyplot as plt
 import glob
 import numpy as np
+from matplotlib import cm
+from matplotlib.colors import Normalize
 
 
 def read_edep_sim_output(root_file_pattern, tree_name="events"):
@@ -283,7 +285,7 @@ def plot_evis_vs_ekin(df):
         plt.figure(figsize=(6, 5))
         plt.hist2d(
             df_pdg['E_kin'], df_pdg['E_vis'],
-            bins=30,
+            bins=60,
             range=[[e_kin_min, e_kin_max], [e_vis_min, e_vis_max]],
             cmap='viridis'
         )
@@ -338,9 +340,11 @@ def plot_dwall_vs_containment(df):
 
     plt.figure(figsize=(7, 5))
     plt.hist2d(
-        df_filtered['d_wall'],
-        df_filtered['is_contained_TPC'],        bins=[100, 2], 
-        range=[[df['d_wall_TPC'].min(), df['d_wall_TPC'].max()], [-0.5, 1.5]],
+        df_filtered['d_wall_TPC'],
+        df_filtered['is_contained_TPC'],        
+        bins=[100, 2], 
+        range=[[df_filtered['d_wall_TPC'].min(), df_filtered['d_wall_TPC'].max()], 
+        [-0.5, 1.5]],
         cmap='viridis'
     )
     plt.colorbar(label='Counts')
@@ -414,9 +418,7 @@ def plot_evis_over_ekin_vs_containment_per_pdg(df):
         df_pdg = df[
             (df['pdg'] == pdg) &
             (df['E_kin'] > 0) &
-            (df['E_vis'] >= 0) &
-            np.isfinite(df['E_vis']) &
-            np.isfinite(df['E_kin']) &
+            (df['E_vis'] > 1) &
             df['is_contained_TPC'].isin([0, 1])
         ].copy()
 
@@ -450,7 +452,7 @@ def plot_evis_over_e_vs_containment_per_pdg(df):
         df_pdg = df[
             (df['pdg'] == pdg) &
             (df['E'] > 0) &
-            (df['E_vis'] >= 0) &
+            (df['E_vis'] > 1) &
             np.isfinite(df['E_vis']) &
             np.isfinite(df['E']) &
             df['is_contained_TPC'].isin([0, 1])
@@ -479,7 +481,7 @@ def plot_evis_over_e_vs_containment_per_pdg(df):
         plt.close()
 
 def plot_dwall_vs_evis_over_ekin_uncontained_per_pdg(df):
-    output_dir = os.path.join(get_output_dir(), "dwall_vs_evis_over_ekin_uncontained_per_pdg")
+    output_dir = os.path.join(get_output_dir())
     os.makedirs(output_dir, exist_ok=True)
 
     for pdg in df['pdg'].unique():
@@ -487,7 +489,7 @@ def plot_dwall_vs_evis_over_ekin_uncontained_per_pdg(df):
             (df['pdg'] == pdg) &
             (df['is_contained_TPC'] == 0) &
             (df['E_kin'] > 0) &
-            (df['E_vis'] >= 0) &
+            (df['E_vis'] > 1) &
             np.isfinite(df['d_wall_TPC'])
         ].copy()
 
@@ -513,7 +515,7 @@ def plot_dwall_vs_evis_over_ekin_uncontained_per_pdg(df):
         plt.close()
 
 def plot_dwall_vs_evis_over_e_uncontained_per_pdg(df):
-    output_dir = os.path.join(get_output_dir(), "dwall_vs_evis_over_e_uncontained_per_pdg")
+    output_dir = os.path.join(get_output_dir())
     os.makedirs(output_dir, exist_ok=True)
 
     for pdg in df['pdg'].unique():
@@ -521,7 +523,7 @@ def plot_dwall_vs_evis_over_e_uncontained_per_pdg(df):
             (df['pdg'] == pdg) &
             (df['is_contained_TPC'] == 0) &
             (df['E'] > 0) &
-            (df['E_vis'] >= 0) &
+            (df['E_vis'] > 1) &
             np.isfinite(df['d_wall_TPC'])
         ].copy()
 
@@ -532,10 +534,10 @@ def plot_dwall_vs_evis_over_e_uncontained_per_pdg(df):
 
         plt.figure(figsize=(7, 5))
         plt.hist2d(
-            np.log10(df_pdg['d_wall_TPC'] + 1e-3),
+            df_pdg['d_wall_TPC'],
             df_pdg['evis_over_e'],
-            bins=[100, 100],
-            vmax= np.max(df_pdg['evis_over_ekin']),
+            bins=[30, 30],
+            vmax= np.max(df_pdg['evis_over_e']),
             cmap='viridis'
         )
         plt.colorbar(label='Counts')
@@ -546,21 +548,81 @@ def plot_dwall_vs_evis_over_e_uncontained_per_pdg(df):
         plt.savefig(os.path.join(output_dir, f'dwall_vs_evis_over_e_pdg_{pdg_code_to_name(pdg)}.png'))
         plt.close()
 
+def plot_dwall(df):
+    output_dir = os.path.join(get_output_dir())
+    os.makedirs(output_dir, exist_ok=True)
+
+    dwall = df['d_wall_TPC'].copy()
+    dwall = dwall.replace([np.inf, -np.inf], np.nan)
+    dwall = dwall.dropna()
+
+    plt.figure(figsize=(7, 5))
+    plt.hist(dwall, bins=100, range=(0, 4e6), histtype='step', color='black', linewidth=1.5)
+    plt.xlabel("d_wall_TPC [mm]")
+    plt.ylabel("Counts")
+    plt.title("1D Histogram of d_wall_TPC (Inf → 9,999,999)")
+    plt.yscale('log')
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "dwall_1d_all_particles.png"))
+    plt.close()
+
+
+def plot_evis_over_etrue_vs_etrue(df):
+    output_dir = get_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    particle_species = df['pdg'].unique()
+    for pdg in particle_species:
+        df_pdg = df[
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['E_vis'] > 1) 
+        ].copy()
+        if df_pdg.empty:
+            continue
+        ratio = df_pdg['E_vis'] / df_pdg['E']
+        e_true = df_pdg['E']
+        plt.figure(figsize=(7, 5))
+        e_true_min, e_true_max = df_pdg['E'].min(), df_pdg['E'].max()
+        hist, xedges, yedges = np.histogram2d(
+            e_true, ratio,
+            bins=[60, 60],
+            range=[[e_true_min, e_true_max], [0, 1.2]]
+        )
+        hist_masked = np.ma.masked_where(hist == 0, hist)
+        cmap = plt.colormaps['viridis'].copy()
+        cmap.set_bad(color='white')  # This sets masked (zero) bins to white
+
+        plt.pcolormesh(
+            xedges, yedges, hist_masked.T,
+            cmap=cmap,
+            norm=Normalize(vmin=hist_masked.min(), vmax=hist_masked.max())
+        )
+        plt.colorbar(label='Counts')
+        plt.xlabel('E_true [MeV]')
+        plt.ylabel('E_vis / E_true')
+        plt.title(f'{pdg_code_to_name(pdg)}: E_vis/E_true vs E_true')
+        plt.tight_layout()
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_2D_EvisOverEtrue_vs_Etrue.png")
+        plt.savefig(fname)
+        plt.close()
+
 if __name__ == "__main__":
     # df = read_edep_sim_output("outputs/edep_sim_output.root")
-    # plot_evis_over_ekin(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_evis_over_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_evis_over_etrue_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_evis_over_etrue_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_evis_over_ekin_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_evis_over_ekin_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_evis_vs_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_evis_vs_ekin(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_particle_multiplicity(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_dwall_vs_containment(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_normalized_dwall_vs_containment_by_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_evis_over_e_vs_containment_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    # plot_evis_over_ekin_vs_containment_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_ekin(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_ekin_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_ekin_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_vs_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_vs_ekin(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_particle_multiplicity(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_dwall_vs_containment(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_normalized_dwall_vs_containment_by_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_e_vs_containment_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_ekin_vs_containment_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
     plot_dwall_vs_evis_over_e_uncontained_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
     plot_dwall_vs_evis_over_ekin_uncontained_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_dwall(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue_vs_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
     pass
