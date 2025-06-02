@@ -128,7 +128,7 @@ for root_file in root_files:
                 pz = particle.GetMomentum().Pz()
                 p = particle.GetMomentum().P()
                 theta = particle.GetMomentum().Theta()
-                phi = np.arcsin(py/p) if p != 0 else 0
+                phi = np.arccos(py/p) if p != 0 else 0 #CHECK PHI!!!!
                 
                 is_all_contained_TPC[track_id] = 1
                 is_contained_TMS_matched[track_id] = 0
