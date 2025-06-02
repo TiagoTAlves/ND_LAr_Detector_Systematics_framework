@@ -9,6 +9,7 @@ from matplotlib import cm
 from matplotlib.colors import Normalize
 
 
+
 def read_edep_sim_output(root_file_pattern, tree_name="events"):
     """Read all ROOT files matching the pattern and return a concatenated pandas DataFrame."""
     dfs = []
@@ -365,7 +366,6 @@ def plot_normalized_dwall_vs_containment_by_pdg(df):
     for pdg in df['pdg'].unique():
         df_pdg = df[df['pdg'] == pdg]
 
-        # Filter for finite and positive d_wall_TPC and valid containment
         mask = (
             np.isfinite(df_pdg['d_wall_TPC']) &
             (df_pdg['d_wall_TPC'] > 0) &
@@ -567,7 +567,7 @@ def plot_dwall(df):
     plt.close()
 
 
-def plot_evis_over_etrue_vs_etrue(df):
+def plot_evis_over_etrue_vs_etrue(df): 
     output_dir = get_output_dir()
     os.makedirs(output_dir, exist_ok=True)
     particle_species = df['pdg'].unique()
@@ -575,23 +575,22 @@ def plot_evis_over_etrue_vs_etrue(df):
         df_pdg = df[
             (df['pdg'] == pdg) &
             (df['E'] > 0) &
-            (df['E_vis'] > 1) 
+            (df['is_contained_TPC'] == 0) 
         ].copy()
         if df_pdg.empty:
             continue
         ratio = df_pdg['E_vis'] / df_pdg['E']
         e_true = df_pdg['E']
         plt.figure(figsize=(7, 5))
-        e_true_min, e_true_max = df_pdg['E'].min(), df_pdg['E'].max()
+        # e_true_min, e_true_max = df_pdg['E'].min(), df_pdg['E'].max()
         hist, xedges, yedges = np.histogram2d(
             e_true, ratio,
-            bins=[60, 60],
-            range=[[e_true_min, e_true_max], [0, 1.2]]
+            bins=[25, 25],
+            range=[[1, 5000], [0, 1.2]]
         )
         hist_masked = np.ma.masked_where(hist == 0, hist)
         cmap = plt.colormaps['viridis'].copy()
         cmap.set_bad(color='white')  # This sets masked (zero) bins to white
-
         plt.pcolormesh(
             xedges, yedges, hist_masked.T,
             cmap=cmap,
@@ -606,23 +605,265 @@ def plot_evis_over_etrue_vs_etrue(df):
         plt.savefig(fname)
         plt.close()
 
+def plot_evis_over_etrue_vs_theta(df): 
+    output_dir = get_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    particle_species = df['pdg'].unique()
+    for pdg in particle_species:
+        df_pdg = df[
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['is_contained_TPC'] == 0) 
+        ].copy()
+        if df_pdg.empty:
+            continue
+        ratio = df_pdg['E_vis'] / df_pdg['E']
+        theta = df_pdg['theta']
+        plt.figure(figsize=(7, 5))
+        hist, xedges, yedges = np.histogram2d(
+            theta, ratio,
+            bins=[50, 50],
+            range=[[0, np.pi], [0, 1.2]]
+        )
+        hist_masked = np.ma.masked_where(hist == 0, hist)
+        cmap = plt.colormaps['viridis'].copy()
+        cmap.set_bad(color='white')  # This sets masked (zero) bins to white
+        plt.pcolormesh(
+            xedges, yedges, hist_masked.T,
+            cmap=cmap,
+            norm=Normalize(vmin=hist_masked.min(), vmax=hist_masked.max())
+        )
+        plt.colorbar(label='Counts')
+        plt.xlabel('theta [rad]')
+        plt.ylabel('E_vis / E_true')
+        plt.title(f'{pdg_code_to_name(pdg)}: E_vis/E_true vs theta')
+        plt.tight_layout()
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_2D_EvisOverEtrue_vs_theta.png")
+        plt.savefig(fname)
+        plt.close()
+
+def plot_evis_over_etrue_vs_phi(df): 
+    output_dir = get_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    particle_species = df['pdg'].unique()
+    for pdg in particle_species:
+        df_pdg = df[
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['is_contained_TPC'] == 0) 
+        ].copy()
+        if df_pdg.empty:
+            continue
+        ratio = df_pdg['E_vis'] / df_pdg['E']
+        phi = df_pdg['phi']
+        plt.figure(figsize=(7, 5))
+        hist, xedges, yedges = np.histogram2d(
+            phi, ratio,
+            bins=[50, 50],
+            range=[[-np.pi/2, np.pi/2], [0, 1.2]]
+        )
+        hist_masked = np.ma.masked_where(hist == 0, hist)
+        cmap = plt.colormaps['viridis'].copy()
+        cmap.set_bad(color='white')  # This sets masked (zero) bins to white
+        plt.pcolormesh(
+            xedges, yedges, hist_masked.T,
+            cmap=cmap,
+            norm=Normalize(vmin=hist_masked.min(), vmax=hist_masked.max())
+        )
+        plt.colorbar(label='Counts')
+        plt.xlabel('phi [rad]')
+        plt.ylabel('E_vis / E_true')
+        plt.title(f'{pdg_code_to_name(pdg)}: E_vis/E_true vs phi')
+        plt.tight_layout()
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_2D_EvisOverEtrue_vs_phi.png")
+        plt.savefig(fname)
+        plt.close()
+
+def plot_evis_over_etrue_vs_d_wall(df): 
+    output_dir = get_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    particle_species = df['pdg'].unique()
+    for pdg in particle_species:
+        df_pdg = df[
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['is_contained_TPC'] == 0) 
+        ].copy()
+        if df_pdg.empty:
+            continue
+        ratio = df_pdg['E_vis'] / df_pdg['E']
+        d_wall = df_pdg['d_wall_TPC']/1000
+
+        plt.figure(figsize=(7, 5))
+        hist, xedges, yedges = np.histogram2d(
+            d_wall, ratio,
+            bins=[50, 50],
+            range=[[0, 5], [0, 1.2]]
+        )
+        hist_masked = np.ma.masked_where(hist == 0, hist)
+        cmap = plt.colormaps['viridis'].copy()
+        cmap.set_bad(color='white')  # This sets masked (zero) bins to white
+        plt.pcolormesh(
+            xedges, yedges, hist_masked.T,
+            cmap=cmap,
+            norm=Normalize(vmin=hist_masked.min(), vmax=hist_masked.max())
+        )
+        plt.colorbar(label='Counts')
+        plt.xlabel('d_wall [m]')
+        plt.ylabel('E_vis / E_true')
+        plt.title(f'{pdg_code_to_name(pdg)}: E_vis/E_true vs d_wall')
+        plt.tight_layout()
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_2D_EvisOverEtrue_vs_d_wall.png")
+        plt.savefig(fname)
+        plt.close()
+
+def plot_evis_over_etrue_vs_x(df): # Check inside fiducial volume
+    output_dir = get_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    particle_species = df['pdg'].unique()
+    for pdg in particle_species:
+        df_pdg = df[
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['is_contained_TPC'] == 1) &
+            (df['start_x'] > -3478.48) & (df['start_x'] < 3478.48) &
+            (df['start_y'] > -2166.71) & (df['start_y'] < 829.282) &
+            (df['start_z'] > 4179.24) & (df['start_z'] < 9135.88)
+        ].copy()
+        if df_pdg.empty:
+            continue
+        ratio = df_pdg['E_vis'] / df_pdg['E']
+        x = df_pdg['start_x'] / 1000  # convert mm to m
+        plt.figure(figsize=(7, 5))
+        hist, xedges, yedges = np.histogram2d(
+            x, ratio,
+            bins=[50, 50],
+            range=[[-3.47848, 3.47848], [0, 1.2]]
+        )
+        hist_masked = np.ma.masked_where(hist == 0, hist)
+        cmap = plt.colormaps['viridis'].copy()
+        cmap.set_bad(color='white')
+        plt.pcolormesh(
+            xedges, yedges, hist_masked.T,
+            cmap=cmap,
+            norm=Normalize(vmin=hist_masked.min(), vmax=hist_masked.max())
+        )
+        plt.colorbar(label='Counts')
+        plt.xlabel('start_x [m]')
+        plt.ylabel('E_vis / E_true')
+        plt.title(f'{pdg_code_to_name(pdg)}: E_vis/E_true vs start_x')
+        plt.tight_layout()
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_2D_EvisOverEtrue_vs_start_x.png")
+        plt.savefig(fname)
+        plt.close()
+
+        
+def plot_evis_over_etrue_vs_y(df): 
+    output_dir = get_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    particle_species = df['pdg'].unique()
+    for pdg in particle_species:
+        df_pdg = df[
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['is_contained_TPC'] == 1) &
+            (df['start_x'] > -3478.48) & (df['start_x'] < 3478.48) &
+            (df['start_y'] > -2166.71) & (df['start_y'] < 829.282) &
+            (df['start_z'] > 4179.24) & (df['start_z'] < 9135.88)
+        ].copy()
+        if df_pdg.empty:
+            continue
+        ratio = df_pdg['E_vis'] / df_pdg['E']
+        y = df_pdg['start_y'] / 1000  # convert mm to m
+
+        plt.figure(figsize=(7, 5))
+        hist, xedges, yedges = np.histogram2d(
+            y, ratio,
+            bins=[50, 50],
+            range=[[-2.16671, 0.829282], [0, 1.2]]
+        )
+        hist_masked = np.ma.masked_where(hist == 0, hist)
+        cmap = plt.colormaps['viridis'].copy()
+        cmap.set_bad(color='white')
+        plt.pcolormesh(
+            xedges, yedges, hist_masked.T,
+            cmap=cmap,
+            norm=Normalize(vmin=hist_masked.min(), vmax=hist_masked.max())
+        )
+        plt.colorbar(label='Counts')
+        plt.xlabel('start_y [m]')
+        plt.ylabel('E_vis / E_true')
+        plt.title(f'{pdg_code_to_name(pdg)}: E_vis/E_true vs start_y')
+        plt.tight_layout()
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_2D_EvisOverEtrue_vs_start_y.png")
+        plt.savefig(fname)
+        plt.close()
+
+def plot_evis_over_etrue_vs_z(df): 
+    output_dir = get_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    particle_species = df['pdg'].unique()
+    for pdg in particle_species:
+        df_pdg = df[
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['is_contained_TPC'] == 1) &
+            (df['start_x'] > -3478.48) & (df['start_x'] < 3478.48) &
+            (df['start_y'] > -2166.71) & (df['start_y'] < 829.282) &
+            (df['start_z'] > 4179.24) & (df['start_z'] < 9135.88)
+        ].copy()
+        if df_pdg.empty:
+            continue
+        ratio = df_pdg['E_vis'] / df_pdg['E']
+        z = df_pdg['start_z'] / 1000  # convert mm to m
+
+        plt.figure(figsize=(7, 5))
+        hist, xedges, yedges = np.histogram2d(
+            z, ratio,
+            bins=[50, 50],
+            range=[[4.17924, 9.13588], [0, 1.2]]
+        )
+        hist_masked = np.ma.masked_where(hist == 0, hist)
+        cmap = plt.colormaps['viridis'].copy()
+        cmap.set_bad(color='white')
+        plt.pcolormesh(
+            xedges, yedges, hist_masked.T,
+            cmap=cmap,
+            norm=Normalize(vmin=hist_masked.min(), vmax=hist_masked.max())
+        )
+        plt.colorbar(label='Counts')
+        plt.xlabel('start_z [m]')
+        plt.ylabel('E_vis / E_true')
+        plt.title(f'{pdg_code_to_name(pdg)}: E_vis/E_true vs start_z')
+        plt.tight_layout()
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_2D_EvisOverEtrue_vs_start_z.png")
+        plt.savefig(fname)
+        plt.close()
+
 if __name__ == "__main__":
     # df = read_edep_sim_output("outputs/edep_sim_output.root")
-    plot_evis_over_ekin(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_over_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_over_etrue_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_over_etrue_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_over_ekin_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_over_ekin_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_vs_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_vs_ekin(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_particle_multiplicity(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_dwall_vs_containment(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_normalized_dwall_vs_containment_by_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_over_e_vs_containment_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_over_ekin_vs_containment_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_dwall_vs_evis_over_e_uncontained_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_dwall_vs_evis_over_ekin_uncontained_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_dwall(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
-    plot_evis_over_etrue_vs_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_ekin(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_etrue_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_etrue_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_ekin_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_ekin_not_contained(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_vs_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_vs_ekin(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_particle_multiplicity(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_dwall_vs_containment(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_normalized_dwall_vs_containment_by_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_e_vs_containment_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_ekin_vs_containment_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_dwall_vs_evis_over_e_uncontained_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_dwall_vs_evis_over_ekin_uncontained_per_pdg(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_dwall(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_etrue_vs_etrue(read_edep_sim_output("outputs/edep_sim_output_chunk*mm, tree_name="events"))
+    # plot_evis_over_etrue_vs_theta(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_etrue_vs_phi(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    # plot_evis_over_etrue_vs_d_wall(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue_vs_x(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue_vs_y(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+    plot_evis_over_etrue_vs_z(read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"))
+
     pass
