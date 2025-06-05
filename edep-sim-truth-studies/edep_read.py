@@ -174,7 +174,7 @@ for root_file in root_files:
                 data_particles["is_contained_TPC"].append(is_all_contained_TPC[track_id])
                 data_particles["is_contained_TMS_matching"].append(is_contained_TMS_matched[track_id])
                 data_particles["is_contained"].append(1 if is_all_contained_TPC[track_id] == 1 or is_contained_TMS_matched[track_id] == 1 else 0)
-
+                data_particles["E_vis/E_true"].append(data_particles["E_vis"][-1] / data_particles["E"][-1] if data_particles["E"][-1] != 0 else 0)
     parent_to_tracks.clear()
     energy_deposit_by_key.clear()
     track_length_by_key.clear()
