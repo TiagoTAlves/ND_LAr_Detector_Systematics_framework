@@ -27,7 +27,7 @@ std::string remove_trailing_nums(std::string instr);
 
 /* void point_walk(double  x=0, double  y=10, double  z=-1000, */
 /*                 double px=0, double py=0, double pz=1, */
-void point_walk(double  x=0, double  y=0, double  z=100000,
+void point_walk(double  x=0, double  y=0, double  z=8000000,
                 double px=0, double py=0, double pz=-1,
 
 		/* void point_walk(double  x=0, double  y=10000, double  z=0, */
