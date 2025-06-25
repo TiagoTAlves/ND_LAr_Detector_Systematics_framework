@@ -44,7 +44,7 @@ def pdg_code_to_name(pdg_code):
         print(f"Error converting PDG code {pdg_code}: {e}")
         return str(pdg_code)
 
-def ratio_vs_variable_norm_columns(df, var, containment, bins_x=50, bins_y=50, var_range=None):
+def ratio_vs_variable_norm_columns(df, var, containment=None, bins_x=50, bins_y=50, var_range=None, volume="active"):
     """
     Generalized 2D normalized column plot for ratio (E_vis/E_true) vs a variable.
     - df: DataFrame
@@ -56,8 +56,10 @@ def ratio_vs_variable_norm_columns(df, var, containment, bins_x=50, bins_y=50, v
     """
     if containment == 1:
         containment_str = "contained"
-    else:
+    elif containment == 0:
         containment_str = "not_contained"
+    else:
+        containment_str = "all"
 
     output_dir = os.path.join(get_output_dir(), f"{var}_vs_ratio_{containment_str}")
     os.makedirs(output_dir, exist_ok=True)
@@ -68,14 +70,29 @@ def ratio_vs_variable_norm_columns(df, var, containment, bins_x=50, bins_y=50, v
         x_exclude_full = [3500, 2500, 1500, 500, -500, -1500, -2500]
         z_exclude = [5157.559, 6157.559, 7157.559, 8157.559]
 
-        df_pdg = df[
-            (df['pdg'] == pdg) &
-            (df['E'] > 0) &
-            (df['is_contained_TPC'] == containment) &
-            (df['start_x'] > (-3478.48 + 500)) & (df['start_x'] < (3478.48 - 500)) &
-            (df['start_y'] > (-2166.71 + 500)) & (df['start_y'] < (829.282 - 500)) &
-            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500))
-        ].copy()
+        if volume == "active":
+            mask = (
+                (df['pdg'] == pdg) &
+                (df['E'] > 0) &
+                (df['start_x'] > (-3478.48)) & (df['start_x'] < (3478.48)) &
+                (df['start_y'] > (-2166.71)) & (df['start_y'] < (829.282)) &
+                (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88)) &
+                (df['E_vis'] > 0)
+            )
+        elif volume == "fiducial":
+            mask = (
+                (df['pdg'] == pdg) &
+                (df['E'] > 0) &
+                (df['start_x'] > (-3478.48 + 500)) & (df['start_x'] < (3478.48 - 500)) &
+                (df['start_y'] > (-2166.71 + 500)) & (df['start_y'] < (829.282 - 500)) &
+                (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500)) &
+                (df['E_vis'] > 0) 
+            )
+        else:
+            raise ValueError(f"Unknown volume: {volume}. Please specify 'active' or 'fiducial'.")
+        if containment is not None:
+            mask &= (df['is_contained_TPC'] == containment)
+        df_pdg = df[mask].copy()
 
         for xc in x_exclude_half:
             df_pdg = df_pdg[~((df_pdg['start_x'] > (xc - 3.175)) & (df_pdg['start_x'] < (xc + 3.175)))]
@@ -86,18 +103,18 @@ def ratio_vs_variable_norm_columns(df, var, containment, bins_x=50, bins_y=50, v
         if df_pdg.empty or var not in df_pdg.columns:
             continue
 
+        if var in ['d_wall_TPC', 'start_x', 'start_y', 'start_z']:
+            x = df_pdg[var]
+            x = x / 1000
+
         ratio = df_pdg['E_vis'] / df_pdg['E']
         if var == 'd_wall_TPC':
-            x = df_pdg[var] / 1000 
             default_range = (0, 7)
         elif var == 'start_x':
-            x = df_pdg[var] / 1000
             default_range = (-3.47848, 3.47848)
         elif var == 'start_y':
-            x = df_pdg[var] / 1000
             default_range = (-2.16671, 0.829282)
         elif var == 'start_z':
-            x = df_pdg[var] / 1000
             default_range = (4.17924, 9.13588)
         else:
             x = df_pdg[var]
@@ -142,23 +159,17 @@ def ratio_vs_variable_norm_columns(df, var, containment, bins_x=50, bins_y=50, v
         std_ratios = []
         for i in range(len(xedges) - 1):
             mask = (x >= xedges[i]) & (x < xedges[i+1])
-            if np.any(mask):
-                std_ratios.append(ratio[mask].std())
-            else:
-                std_ratios.append(np.nan)
-        std_ratios = np.array(std_ratios)
         plt.errorbar(
             x_bin_centers[valid], avg_ratios[valid],
-            yerr=std_ratios[valid],
             fmt='x', color='red', markersize=7, label='Average ratio ± std'
         )
         plt.legend()
 
-        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_2D_ratio_vs_{var}_{containment}_norm_columns.png")
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_2D_ratio_vs_{var}_{containment}_{volume}_norm_columns.png")
         plt.savefig(fname)
         plt.close()
 
-def avg_ratio_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, range_y=None, ratio_denominator='E', containment=None):
+def avg_ratio_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, range_y=None, ratio_denominator='E', containment=None, volume="active"):
     """
     Generalized 2D plot of average (ratio_numerator/ratio_denominator) in bins of var_x vs var_y.
     - df: DataFrame
@@ -185,13 +196,26 @@ def avg_ratio_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, r
         x_exclude_full = [3500, 2500, 1500, 500, -500, -1500, -2500]
         z_exclude = [5157.559, 6157.559, 7157.559, 8157.559]
 
-        mask = (
+        if volume == "active":
+            mask = (
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['start_x'] > (-3478.48)) & (df['start_x'] < (3478.48)) &
+            (df['start_y'] > (-2166.71)) & (df['start_y'] < (829.282)) &
+            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88)) &
+            (df['E_vis'] > 0)
+            )
+        elif volume == "fiducial":
+            mask = (
             (df['pdg'] == pdg) &
             (df['E'] > 0) &
             (df['start_x'] > (-3478.48 + 500)) & (df['start_x'] < (3478.48 - 500)) &
             (df['start_y'] > (-2166.71 + 500)) & (df['start_y'] < (829.282 - 500)) &
-            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500))
-        )
+            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500)) &
+            (df['E_vis'] > 0) 
+            )
+        else:
+            raise ValueError(f"Unknown volume: {volume}. Please specify 'active' or 'fiducial'.")
         if containment is not None:
             mask &= (df['is_contained_TPC'] == containment)
         df_pdg = df[mask].copy()
@@ -277,11 +301,11 @@ def avg_ratio_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, r
                         color='black', ha='center', va='center', fontsize=6
                     )
 
-        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_avg_E_vis_over_{ratio_denominator}_vs_{var_x}_vs_{var_y}_{containment_str}.png")
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_avg_E_vis_over_{ratio_denominator}_vs_{var_x}_vs_{var_y}_{containment_str}_{volume}.png")
         plt.savefig(fname)
         plt.close()
 
-def std_ratio_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, range_y=None, ratio_denominator='E', containment=None):
+def std_ratio_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, range_y=None, ratio_denominator='E', containment=None, volume="active"):
     """
     Generalized 2D plot of std(ratio) in bins of var_x vs var_y.
     - df: DataFrame
@@ -308,14 +332,24 @@ def std_ratio_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, r
         x_exclude_full = [3500, 2500, 1500, 500, -500, -1500, -2500]
         z_exclude = [5157.559, 6157.559, 7157.559, 8157.559]
 
-        mask = (
+        if volume == "active":
+            mask = (
             (df['pdg'] == pdg) &
             (df['E'] > 0) &
-            (df['E_vis'] > 0) &
+            (df['start_x'] > (-3478.48)) & (df['start_x'] < (3478.48)) &
+            (df['start_y'] > (-2166.71)) & (df['start_y'] < (829.282)) &
+            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88)) &
+            (df['E_vis'] > 0)
+            )
+        elif volume == "fiducial":
+            mask = (
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
             (df['start_x'] > (-3478.48 + 500)) & (df['start_x'] < (3478.48 - 500)) &
             (df['start_y'] > (-2166.71 + 500)) & (df['start_y'] < (829.282 - 500)) &
-            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500))
-        )
+            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500)) &
+            (df['E_vis'] > 0) 
+            )
         if containment is not None:
             mask &= (df['is_contained_TPC'] == containment)
         df_pdg = df[mask].copy()
@@ -399,12 +433,12 @@ def std_ratio_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, r
                         color='black', ha='center', va='center', fontsize=6
                     )
 
-        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_std_E_vis_over_{ratio_denominator}_vs_{var_x}_vs_{var_y}_{containment_str}.png")
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_std_E_vis_over_{ratio_denominator}_vs_{var_x}_vs_{var_y}_{containment_str}_{volume}.png")
         plt.savefig(fname)
         plt.close()
 
 
-def counts_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, range_y=None, containment=None):
+def counts_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, range_y=None, containment=None, volume="active"):
     """
     Generalized 2D counts plot in bins of var_x vs var_y.
     - df: DataFrame
@@ -430,14 +464,24 @@ def counts_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, rang
         x_exclude_full = [3500, 2500, 1500, 500, -500, -1500, -2500]
         z_exclude = [5157.559, 6157.559, 7157.559, 8157.559]
 
-        mask = (
+        if volume == "active":
+            mask = (
             (df['pdg'] == pdg) &
             (df['E'] > 0) &
-            (df['E_vis'] > 0) &
+            (df['start_x'] > (-3478.48)) & (df['start_x'] < (3478.48)) &
+            (df['start_y'] > (-2166.71)) & (df['start_y'] < (829.282)) &
+            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88)) &
+            (df['E_vis'] > 0)
+            )
+        elif volume == "fiducial":
+            mask = (
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
             (df['start_x'] > (-3478.48 + 500)) & (df['start_x'] < (3478.48 - 500)) &
             (df['start_y'] > (-2166.71 + 500)) & (df['start_y'] < (829.282 - 500)) &
-            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500))
-        )
+            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500)) &
+            (df['E_vis'] > 0) 
+            )
         if containment is not None:
             mask &= (df['is_contained_TPC'] == containment)
         df_pdg = df[mask].copy()
@@ -499,7 +543,7 @@ def counts_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, rang
         plt.colorbar(label='Counts')
         plt.xlabel(var_x)
         plt.ylabel(var_y)
-        plt.title(f'Counts vs {var_x} vs {var_y} for {containment_str} {pdg_code_to_name(pdg)}')
+        plt.title(f'Counts vs {var_x} vs {var_y} for {containment_str} {pdg_code_to_name(pdg)}, {volume} volume')
         plt.tight_layout()
 
         for i in range(len(x_bins)-1):
@@ -513,14 +557,14 @@ def counts_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, rang
                         color='black', ha='center', va='center', fontsize=6
                     )
 
-        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_counts_{var_x}_vs_{var_y}_{containment_str}.png")
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_counts_{var_x}_vs_{var_y}_{containment_str}_{volume}.png")
         plt.savefig(fname)
         plt.close()
 
 def heaviside_gaussian(x, mu, sigma, norm):
     return norm * np.exp(-0.5 * ((x - mu) / sigma) ** 2) * (x <= 1)
 
-def specific_bin_hist(df, pdg, var_x, var_y, range_x, range_y, ratio_denominator='E', containment=None, bins=12):
+def specific_bin_hist(df, pdg, var_x, var_y, range_x, range_y, ratio_denominator='E', containment=None, bins=12, volume="active"):
     if containment == 1:
         containment_str = "contained"
     elif containment == 0:
@@ -538,14 +582,24 @@ def specific_bin_hist(df, pdg, var_x, var_y, range_x, range_y, ratio_denominator
     z_exclude = [5157.559, 6157.559, 7157.559, 8157.559]
 
 
-    mask = (
+    if volume == "active":
+        mask = (
         (df['pdg'] == pdg) &
         (df['E'] > 0) &
-        (df['E_vis'] > 0) &
+        (df['start_x'] > (-3478.48)) & (df['start_x'] < (3478.48)) &
+        (df['start_y'] > (-2166.71)) & (df['start_y'] < (829.282)) &
+        (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88)) &
+        (df['E_vis'] > 0)
+        )
+    elif volume == "fiducial":
+        mask = (
+        (df['pdg'] == pdg) &
+        (df['E'] > 0) &
         (df['start_x'] > (-3478.48 + 500)) & (df['start_x'] < (3478.48 - 500)) &
         (df['start_y'] > (-2166.71 + 500)) & (df['start_y'] < (829.282 - 500)) &
-        (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500))
-    )
+        (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500)) &
+        (df['E_vis'] > 0) 
+        )
 
     if containment is not None:
         mask &= (df['is_contained_TPC'] == containment)
@@ -599,7 +653,6 @@ def specific_bin_hist(df, pdg, var_x, var_y, range_x, range_y, ratio_denominator
         popt, pcov = curve_fit(heaviside_gaussian, x_fit, y_fit, p0=p0)
         mu, sigma, norm_factor = popt
         fit_label = f'Heaviside Gaussian fit\n$\mu$={mu:.3f}, $\sigma$={sigma:.3f}'
-        # For plotting the fit
         x_vals = np.linspace(0, 1.2, 200)
         plt.plot(
             x_vals,
@@ -607,11 +660,20 @@ def specific_bin_hist(df, pdg, var_x, var_y, range_x, range_y, ratio_denominator
             'r--',
             label=fit_label
         )
+        n_samples = int(np.sum(y_fit))
+        samples = []
+        while len(samples) < n_samples:
+            r = np.random.normal(mu, sigma, n_samples)
+            r = r[r <= 1]
+            samples.extend(r.tolist())
+        samples = np.array(samples[:n_samples])
+        plt.hist(samples, bins=bins, range=(0, 1.2), histtype='step', color='green', label='Random Throws', alpha=0.7)
+
     except Exception as e:
         print(f"Fit failed: {e}")
     plt.legend()
     plt.tight_layout()
-    fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_ratio_hist_{var_x}_{range_x[0]}_{range_x[1]}_{var_y}_{range_y[0]}_{range_y[1]}_{containment_str}.png")
+    fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_ratio_{ratio_denominator}_hist_{var_x}_{range_x[0]}_{range_x[1]}_{var_y}_{range_y[0]}_{range_y[1]}_{containment_str}_{volume}.png")
     plt.savefig(fname)
     plt.close()
 
@@ -619,41 +681,53 @@ if __name__ == "__main__":
     df = read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events")
     variables = ['d_wall_TPC', 'p', 'start_x', 'start_y', 'start_z', 'E', 'E_vis', ]
     # for var in variables:
-    #     for containment in [0, 1]:
-    #         ratio_vs_variable_norm_columns(
-    #             read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"),
-    #             var='d_wall_TPC',
-    #             containment=containment,
-    #             bins_x=50,
-    #             bins_y=50,
-    #             var_range=(0, 7)
-    #         )
+        # for containment in [0, 1]:
+            # ratio_vs_variable_norm_columns(
+                # read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"),
+                # var='d_wall_TPC',
+                # containment=containment,
+                # bins_x=50,
+                # bins_y=50,
+                # var_range=(0, 7)
+            # )
+    for containment in [0, 1]:
+        ratio_vs_variable_norm_columns(
+            # read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events"),
+            df=df,
+            var='start_x',
+            containment=containment,
+            bins_x=50,
+            bins_y=50,
+            volume="fiducial"
+        )
 
     
     # for var_x, var_y in combinations(variables, 2):
     #     for containment in [0, 1, all]:
-    #         # avg_ratio_vs_vars_2d(
-    #         #     df=df,
-    #         #     var_x=var_x,
-    #         #     var_y=var_y,
-    #         #     bins_x=20,
-    #         #     bins_y=20,
-    #         #     range_x=None,
-    #         #     range_y=None,
-    #         #     ratio_denominator='E',
-    #         #     containment=containment
-    #         # )
-    #         # std_ratio_vs_vars_2d(
-    #         #     df=df,
-    #         #     var_x=var_x,
-    #         #     var_y=var_y,
-    #         #     bins_x=20,
-    #         #     bins_y=20,
-    #         #     range_x=None,
-    #         #     range_y=None,
-    #         #     ratio_denominator='E',
-    #         #     containment=containment
-    #         # )
+    #         avg_ratio_vs_vars_2d(
+    #             df=df,
+    #             var_x=var_x,
+    #             var_y=var_y,
+    #             bins_x=20,
+    #             bins_y=20,
+    #             range_x=None,
+    #             range_y=None,
+    #             ratio_denominator='E',
+    #             containment=containment,
+    #             volume="fiducial"
+    #         )
+    #         std_ratio_vs_vars_2d(
+    #             df=df,
+    #             var_x=var_x,
+    #             var_y=var_y,
+    #             bins_x=20,
+    #             bins_y=20,
+    #             range_x=None,
+    #             range_y=None,
+    #             ratio_denominator='E',
+    #             containment=containment,
+    #             volume="fiducial"
+    #         )
     #         counts_vs_vars_2d(
     #             df=df,
     #             var_x=var_x,
@@ -662,7 +736,8 @@ if __name__ == "__main__":
     #             bins_y=20,
     #             range_x=None,
     #             range_y=None,
-    #             containment=containment
+    #             containment=containment,
+    #             volume="fiducial"
     #         )
     # counts_vs_vars_2d(
     #     df=df,
@@ -672,7 +747,8 @@ if __name__ == "__main__":
     #     bins_y=20,
     #     range_x=None,
     #     range_y=(0,5000),
-    #     containment=0
+    #     volume="fiducial",
+    #     containment=1
     # )
     # avg_ratio_vs_vars_2d(
     #     df=df,
@@ -682,8 +758,9 @@ if __name__ == "__main__":
     #     bins_y=20,
     #     range_x=None,
     #     range_y=(0,5000),
-    #     ratio_denominator='E_kin',
-    #     containment=1
+    #     ratio_denominator='E',
+    #     volume="fiducial",
+    #     containment=0
     # )
     # std_ratio_vs_vars_2d(
     #     df=df,
@@ -693,17 +770,20 @@ if __name__ == "__main__":
     #     bins_y=20,
     #     range_x=None,
     #     range_y=(0,5000),
-    #     ratio_denominator='E_kin',
-    #     containment=1
+    #     ratio_denominator='E',
+    #     volume="fiducial",
+    #     containment=0
     # )
-    specific_bin_hist(
-        df=df,
-        pdg=111,
-        var_x='d_wall_TPC',
-        var_y='p',
-        range_x=(1.0, 1.5),
-        range_y=(250, 500),
-        ratio_denominator='E',
-        containment=1
-    )
+    # specific_bin_hist(
+    #     df=df,
+    #     pdg=211,
+    #     var_x='d_wall_TPC',
+    #     var_y='p',
+    #     range_x=(1.5, 2.0),
+    #     range_y=(500, 750),
+    #     ratio_denominator='E',
+    #     # containment='all',
+    #     # bins=84,
+    #     volume="fiducial"
+    # )
     pass
