@@ -5,3 +5,4 @@ edep-sim-truth-studies/edep-sim/
 __pycache__/
 *.txt
 logs/
+*.csv
