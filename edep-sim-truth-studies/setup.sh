@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Setup script for edep-sim
-
 EDEP_SIM_DIR="edep-sim"
 EDEP_SIM_REPO="https://github.com/DUNE/edep-sim.git"
 EDEP_SIM_BUILD="$EDEP_SIM_DIR/edep-gcc-11-x86_64-redhat-linux/"

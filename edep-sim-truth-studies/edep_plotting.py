@@ -13,8 +13,8 @@ from scipy.integrate import quad
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from scipy.stats import invgauss
+import yaml
 import csv
-
 
 
 plt.rcParams.update({'font.size': 15})
@@ -45,7 +45,6 @@ def get_output_dir():
     return os.path.join("plots", caller)
 
 def pdg_code_to_name(pdg_code):
-    """Convert PDG code to particle name."""
     try:
         from particle import Particle
         particle = Particle.from_pdgid(pdg_code)
@@ -53,6 +52,54 @@ def pdg_code_to_name(pdg_code):
     except Exception as e:
         print(f"Error converting PDG code {pdg_code}: {e}")
         return str(pdg_code)
+
+def filter_df(df, pdg, containment=None, volume="active", x_exclude_half=None, x_exclude_full=None, z_exclude=None, required_vars=None):
+    if x_exclude_half is None:
+        x_exclude_half = [3000, 2000, 1000, 0, -1000, -2000, -3000]
+    if x_exclude_full is None:
+        x_exclude_full = [3500, 2500, 1500, 500, -500, -1500, -2500]
+    if z_exclude is None:
+        z_exclude = [5157.559, 6157.559, 7157.559, 8157.559]
+
+    if volume == "active":
+        mask = (
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['start_x'] > (-3478.48)) & (df['start_x'] < (3478.48)) &
+            (df['start_y'] > (-2166.71)) & (df['start_y'] < (829.282)) &
+            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88)) &
+            (df['E_vis'] > 0)
+        )
+    elif volume == "fiducial":
+        mask = (
+            (df['pdg'] == pdg) &
+            (df['E'] > 0) &
+            (df['start_x'] > (-3478.48 + 500)) & (df['start_x'] < (3478.48 - 500)) &
+            (df['start_y'] > (-2166.71 + 500)) & (df['start_y'] < (829.282 - 500)) &
+            (df['start_z'] > 4179.24) & (df['start_z'] < (9135.88 - 1500)) &
+            (df['E_vis'] > 0) 
+        )
+    else:
+        raise ValueError(f"Unknown volume: {volume}. Please specify 'active' or 'fiducial'.")
+    if containment is not None:
+        mask &= (df['is_contained_TPC'] == containment)
+    df_pdg = df[mask].copy()
+
+    for xc in x_exclude_half:
+        df_pdg = df_pdg[~((df_pdg['start_x'] > (xc - 3.175)) & (df_pdg['start_x'] < (xc + 3.175)))]
+    for xc in x_exclude_full:
+        df_pdg = df_pdg[~((df_pdg['start_x'] > (xc - 28.915)) & (df_pdg['start_x'] < (xc + 28.915)))]
+    for zc in z_exclude:
+        df_pdg = df_pdg[~((df_pdg['start_z'] > (zc - 5)) & (df_pdg['start_z'] < (zc + 5)))]
+
+    # Optionally check for required variables
+    if required_vars is not None:
+        for var in required_vars:
+            if var not in df_pdg.columns:
+                return None
+    if df_pdg.empty:
+        return None
+    return df_pdg
 
 def ratio_vs_variable_norm_columns(df, var, containment=None, bins_x=50, bins_y=50, var_range=None, volume="active", ratio_denominator='E'):
     if containment == 1:
@@ -721,15 +768,14 @@ def fit_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, range_y
                         color='black', ha='center', va='center', fontsize=7
                     )
         plt.tight_layout()
-        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_fit_mu_{var_x}_vs_{var_y}_{containment_str}_{volume}.png")
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_fit_mu_{var_x}_vs_{var_y}_{ratio_denominator}_{containment_str}_{volume}.png")
         plt.savefig(fname)
         plt.close()
 
-        # Plot sigma
         plt.figure(figsize=(8, 6))
         mesh = plt.pcolormesh(
             x_bins, y_bins, sigma_map.T,
-            cmap=cmap, vmin=0, vmax=np.nanmax(sigma_map), shading='auto'
+            cmap=cmap, vmin=0, vmax=1, shading='auto'
         )
         plt.colorbar(label=f'Fit $\sigma$ of E_vis/{ratio_denominator}')
         plt.xlabel(f"{var_x} {unit_x}")
@@ -746,11 +792,11 @@ def fit_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, range_y
                         color='black', ha='center', va='center', fontsize=7
                     )
         plt.tight_layout()
-        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_fit_sigma_{var_x}_vs_{var_y}_{containment_str}_{volume}.png")
+        fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_fit_sigma_{var_x}_vs_{var_y}_{ratio_denominator}_{containment_str}_{volume}.png")
         plt.savefig(fname)
         plt.close()
 
-        csv_fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_fit_mu_sigma_{var_x}_vs_{var_y}_{containment_str}_{volume}.csv")
+        csv_fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_fit_mu_sigma_{var_x}_vs_{var_y}_{ratio_denominator}_{containment_str}_{volume}.csv")
         with open(csv_fname, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow([f"{var_x}_bin", f"{var_y}_bin", "mu", "sigma"])
@@ -762,6 +808,29 @@ def fit_vs_vars_2d(df, var_x, var_y, bins_x=20, bins_y=20, range_x=None, range_y
                     sigma_val = sigma_map[i, j]
                     if not np.isnan(mu_val) and not np.isnan(sigma_val):
                         writer.writerow([x_center, y_center, mu_val, sigma_val])
+
+        yaml_fname = os.path.join(output_dir, f"{pdg_code_to_name(pdg)}_fit_mu_sigma_{var_x}_vs_{var_y}_{containment_str}_{volume}.yaml")
+        systematics = []
+        for i in range(bins_x):
+            for j in range(bins_y):
+                mu_val = mu_map[i, j]
+                sigma_val = sigma_map[i, j]
+                if not np.isnan(mu_val) and not np.isnan(sigma_val):
+                    systematic = {
+                        "Systematic": {
+                            "SampleNames": '["ND_*"]',
+                            "Error": [float(sigma_val)],
+                            "FlatPrior": False,
+                            "KinematicCuts": [
+                                {var_x: [float(x_bins[i]), float(x_bins[i+1])]},
+                                {var_y: [float(y_bins[j]), float(y_bins[j+1])]}
+                            ]
+                        }
+                    }
+                    systematics.append(systematic)
+        yaml_dict = {"Systematics": systematics}
+        with open(yaml_fname, "w") as f:
+            yaml.dump(yaml_dict, f, sort_keys=False)
 
 def specific_bin_hist(df, pdg, var_x, var_y, range_x, range_y, ratio_denominator='E', containment=None, bins=12, volume="active"):
     if containment == 1:
@@ -882,7 +951,7 @@ def specific_bin_hist(df, pdg, var_x, var_y, range_x, range_y, ratio_denominator
     plt.close()
 
 if __name__ == "__main__":
-    df = read_edep_sim_output("outputs/edep_sim_output_chunk*.root", tree_name="events")
+    df = read_edep_sim_output("outputs/edep/edep_sim_output_chunk*.root", tree_name="events")
     variables = ['d_wall_TPC', 'p', 'start_x', 'start_y', 'start_z', 'E', 'E_vis', ]
     # for var in variables:
     #     for containment in [0, 1]:
@@ -1009,6 +1078,18 @@ if __name__ == "__main__":
         range_x=None,
         range_y=(0, 5000),
         ratio_denominator='E',
+        containment=0,
+        volume="fiducial"
+    )
+    fit_vs_vars_2d(
+        df=df,
+        var_x='d_wall_TPC',
+        var_y='p',
+        bins_x=14,
+        bins_y=20,
+        range_x=None,
+        range_y=(0, 5000),
+        ratio_denominator='E_kin',
         containment=0,
         volume="fiducial"
     )
