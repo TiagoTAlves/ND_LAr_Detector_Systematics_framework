@@ -1,6 +1,7 @@
 *.root
 *.png
 edep-sim-truth-studies/edep-sim/
+caf-studies/duneanaobj/
 .vscode/
 __pycache__/
 *.txt
