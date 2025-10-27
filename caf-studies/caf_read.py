@@ -8,7 +8,8 @@ from caf_funcs import (
     update_part,
     pad_dict_lists_to_same_length,
     E_method_lookup,
-    update_df
+    update_df,
+    is_contained
 )
 
 chunk_index, chunk_size, interactive = parse_args()
@@ -84,6 +85,7 @@ part = {
     "px": [],
     "py": [],
     "pz": [],
+    "is_contained": [],
     "common_dlp_contained": [],
     "common_dlp_pdg_reco": [],
     "common_dlp_E_method": [],
@@ -176,6 +178,13 @@ for root_file in root_files:
                     part["px"].append(mc.nu[j].prim[k].p.px)
                     part["py"].append(mc.nu[j].prim[k].p.py)
                     part["pz"].append(mc.nu[j].prim[k].p.pz)
+                    part["is_contained"].append(is_contained(mc.nu[j].prim[k].start_pos.x,
+                                                            mc.nu[j].prim[k].start_pos.y,
+                                                            mc.nu[j].prim[k].start_pos.z,
+                                                            mc.nu[j].prim[k].end_pos.x,
+                                                            mc.nu[j].prim[k].end_pos.y,
+                                                            mc.nu[j].prim[k].end_pos.z,
+                                                            detector="TPC"))
                 for k in range(mc.nu[j].nprefsi):
                     part["ID"].append(mc.nu[j].id)
                     part["idx"].append(j)
@@ -192,6 +201,13 @@ for root_file in root_files:
                     part["px"].append(mc.nu[j].prefsi[k].p.px)
                     part["py"].append(mc.nu[j].prefsi[k].p.py)
                     part["pz"].append(mc.nu[j].prefsi[k].p.pz)
+                    part["is_contained"].append(is_contained(mc.nu[j].prefsi[k].start_pos.x,
+                                                            mc.nu[j].prefsi[k].start_pos.y,
+                                                            mc.nu[j].prefsi[k].start_pos.z,
+                                                            mc.nu[j].prefsi[k].end_pos.x,
+                                                            mc.nu[j].prefsi[k].end_pos.y,
+                                                            mc.nu[j].prefsi[k].end_pos.z,
+                                                            detector="TPC"))
                 for k in range(mc.nu[j].nsec):
                     part["ID"].append(mc.nu[j].id)
                     part["idx"].append(j)
@@ -208,6 +224,13 @@ for root_file in root_files:
                     part["px"].append(mc.nu[j].sec[k].p.px)
                     part["py"].append(mc.nu[j].sec[k].p.py)
                     part["pz"].append(mc.nu[j].sec[k].p.pz)
+                    part["is_contained"].append(is_contained(mc.nu[j].sec[k].start_pos.x,
+                                                            mc.nu[j].sec[k].start_pos.y,
+                                                            mc.nu[j].sec[k].start_pos.z,
+                                                            mc.nu[j].sec[k].end_pos.x,
+                                                            mc.nu[j].sec[k].end_pos.y,
+                                                            mc.nu[j].sec[k].end_pos.z,
+                                                            detector="TPC"))
         
         common = record.common
         for j in range(common.ixn.ndlp):

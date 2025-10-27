@@ -116,3 +116,49 @@ def pad_dict_lists_to_same_length(d):
             # Choose pad value based on content type or key
             pad_val = np.nan if all(isinstance(x, (float, int, type(np.nan))) or x is None for x in lst) else None
             lst.extend([pad_val] * (max_len - len(lst)))
+
+ACTIVE_WALLS = { # numbers from: https://github.com/DUNE/dune-tms/blob/main/config/TMS_Default_Config.toml 
+    "TPC": {
+        "x_min": -347.848,
+        "x_max": 347.848,
+        "y_min": -216.671,
+        "y_max": 82.9282,
+        "z_min": 417.924,
+        "z_max": 913.588,
+    },
+    "TMS": {
+        "x_min": -330.0,
+        "x_max": 330.0,
+        "y_min": -285.0,
+        "y_max": 16.0,
+        "z_min": 1136.2,
+        "z_max": 1831.4,
+    }
+}
+
+FIDUCIAL_WALLS = {
+    "TPC": {
+        "x_min": -300.0,
+        "x_max": 300.0, 
+        "y_min": -200.0,
+        "y_max": 80.0,  
+        "z_min": 400.0, 
+        "z_max": 900.0, 
+    }
+}
+
+def is_contained(start_x, start_y, start_z, stop_x, stop_y, stop_z, detector="TPC"):
+    active = ACTIVE_WALLS[detector]
+    fiducial = FIDUCIAL_WALLS[detector]
+    
+    # Check if starting point is within the fiducial volume
+    in_fiducial = (fiducial["x_min"] <= start_x <= fiducial["x_max"] and
+                   fiducial["y_min"] <= start_y <= fiducial["y_max"] and
+                   fiducial["z_min"] <= start_z <= fiducial["z_max"])
+    
+    # Check if stopping point is within the active volume
+    in_active_volume = (active["x_min"] <= stop_x <= active["x_max"] and
+                        active["y_min"] <= stop_y <= active["y_max"] and
+                        active["z_min"] <= stop_z <= active["z_max"])
+    
+    return 1 if in_fiducial and in_active_volume else 0
