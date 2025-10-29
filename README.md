@@ -30,22 +30,57 @@ pip install -r requirements.txt
 ```
 .
 ├──📂 edep-sim-truth-studies/
+|  ├─📂 edep-sim/
+|  ├─📂 edep-sim-tools/
+|  |  └─point_walk.C
 |  ├─📂 outputs/
 |  ├─📂 plots/
-|  └─ edep_read.py
+|  ├─ edep_cafmaker_plotting.py
+|  ├─ edep_faux_cafmaker.py
+|  ├─ edep_funcs.py
+|  ├─ edep_plotting.py
+|  ├─ edep_read.py
+|  ├─ run_edep_faux_cafmaker.sh
+|  ├─ run_edep_read.sh
+|  ├─ setup.sh
+|  ├─ submit_edep_faux_cafmaker.sub
+|  └─ submit_edep_read.sub 
+├──📂 caf-studies
+|  ├─📂 duneanaobj/
+|  ├─📂 outputs/
+|  ├─ caf_funcs.py
+|  ├─ caf_read.py
+|  └─ setup.sh 
 ├──📂 input-root-files/
 |  ├─📂 CAF
 |  └─📂 EDEP-SIM
-├── requirements.txt
 ├── .gitignore
-└── README.md
+├── README.md
+└── requirements.txt
+```
+
+## CAF Studies
+
+This directory was not nessecerily made to analyse and make plots. Instead it is used to store data in an output root file so plotting can be made easier and much quicker for finding correct binnings for various particles. For now this is still a work in progress. 
+
+To make these root files you must clone the [duneanaobj](https://github.com/DUNE/duneanaobj) repository and then build it. This can be done very easily using the setup.sh bash script.
+
+```bash
+$ cd caf-studies
+$ source setup.sh
+```
+
+This both clones the duneanaobj repo and builds it so that reading EDep-Sim files can be done using the python script. Now to create the output root file you can simply run:
+
+```bash
+$ python3 caf_read.py --chunk=0 --chunksize=1
 ```
 
 ## EDep Sim Truth Studies
 
 ### For analysis
 
-This repository was not nessecerily made to analyse and make plots. Instead it is used to store data in an output root file so plotting can be made easier and much quicker for finding correct binnings for various particles. For now this is still a work in progress. 
+This directory was not nessecerily made to analyse and make plots. Instead it is used to store data in an output root file so plotting can be made easier and much quicker for finding correct binnings for various particles. For now this is still a work in progress. 
 
 To make these root files you must clone the [EDep-Sim](https://github.com/DUNE/edep-sim/tree/master) repository and then build it. This can be done very easily using the setup.sh bash script.
 
@@ -57,7 +92,7 @@ $ source setup.sh
 This both clones the EDep-Sim repo and builds it so that reading EDep-Sim files can be done using the python script. Now to create the output root file you can simply run:
 
 ```bash
-$ python3 edep_read.py
+$ python3 edep_read.py --chunk=0 --chunksize=1
 ```
 
 And then to plot:
