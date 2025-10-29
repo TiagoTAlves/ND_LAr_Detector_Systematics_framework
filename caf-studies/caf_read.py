@@ -2,6 +2,8 @@ import ROOT
 import os
 import pandas as pd
 import glob
+import matplotlib.pyplot as plt
+import numpy as np
 from caf_funcs import (
     MaCh3Modes_lookup,
     parse_args,
@@ -9,8 +11,10 @@ from caf_funcs import (
     pad_dict_lists_to_same_length,
     E_method_lookup,
     update_df,
-    is_contained
+    is_contained,
+    compute_E_true_ratio
 )
+
 
 chunk_index, chunk_size, interactive = parse_args()
 
@@ -50,9 +54,16 @@ data = {
     "E_tru": [],
     "mode": [],
     "mode_name": [],
+    "q0": [],
+    "q3": [],
+    "bjorkenX": [],
+    "inelasticty": [],
     "nu_vtx_x": [],
     "nu_vtx_y": [],
     "nu_vtx_z": [],
+    "common_dlp_reco_vtx_x": [],
+    "common_dlp_reco_vtx_y": [],
+    "common_dlp_reco_vtx_z": [],
     "nu_mom_x": [],
     "nu_mom_y": [],
     "nu_mom_z": [],
@@ -64,9 +75,6 @@ data = {
     "nprim": [],
     "nsec": [],
     "nprefsi": [],
-    "common_dlp_reco_vtx_x": [],
-    "common_dlp_reco_vtx_y": [],
-    "common_dlp_reco_vtx_z": [],
 }
 
 part = {
@@ -86,6 +94,10 @@ part = {
     "py": [],
     "pz": [],
     "is_contained": [],
+    "E_true_ratio_common": [],
+    "E_true_ratio_track": [],
+    "E_true_ratio_shower": [],
+    # "E_kin_ratio": [],
     "common_dlp_contained": [],
     "common_dlp_pdg_reco": [],
     "common_dlp_E_method": [],
@@ -147,6 +159,10 @@ for root_file in root_files:
                 data["E_tru"].append(mc.nu[j].E)
                 data["mode"].append(mc.nu[j].mode)
                 data["mode_name"].append(MaCh3Modes_lookup(mc.nu[j].mode))
+                data["q0"].append(mc.nu[j].q0)
+                data["q3"].append(mc.nu[j].Q2)
+                data["bjorkenX"].append(mc.nu[j].bjorkenX)
+                data["inelasticty"].append(mc.nu[j].inelasticity)
                 data["nu_vtx_x"].append(mc.nu[j].vtx.x)
                 data["nu_vtx_y"].append(mc.nu[j].vtx.y)
                 data["nu_vtx_z"].append(mc.nu[j].vtx.z)
@@ -318,10 +334,67 @@ for root_file in root_files:
                 else:
                     pass                
 
+# part['E_true_ratio_common'] = compute_E_true_ratio(part, 'common_dlp_E')
+# part["E_true_ratio_track"] = compute_E_true_ratio(part, 'nd_lar_dlp_track_E_reco')
+# part["E_true_ratio_shower"] = compute_E_true_ratio(part, 'nd_lar_dlp_shower_E_vis')
+
 pad_dict_lists_to_same_length(data)
 pad_dict_lists_to_same_length(part)
 df = pd.DataFrame(data)
 df_part = pd.DataFrame(part)
+
+# import math
+# def _flatten_item(x):
+#     if x is None:
+#         return []
+#     if isinstance(x, (list, tuple)):
+#         out = []
+#         for y in x:
+#             out.extend(_flatten_item(y))
+#         return out
+#     return [x]
+
+# def flatten_column_to_floats(df, col):
+#     vals = []
+#     for v in df.get(col, []):
+#         for x in _flatten_item(v):
+#             try:
+#                 if x is None:
+#                     continue
+#                 xf = float(x)
+#                 if math.isnan(xf):
+#                     continue
+#                 vals.append(xf)
+#             except Exception:
+#                 continue
+#     return np.array(vals)
+
+# cols = ["E_true_ratio_common", "E_true_ratio_track", "E_true_ratio_shower"]
+# flat_data = {c: flatten_column_to_floats(df_part, c) for c in cols}
+
+# fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+# bins = np.linspace(10.0, 510.0, 51)
+# for ax, c in zip(axes, cols):
+#     data = flat_data[c]
+#     if data.size == 0:
+#         ax.text(0.5, 0.5, "no data", ha="center", va="center")
+#         ax.set_title(c)
+#         ax.set_xlabel("E_true_ratio")
+#         ax.set_ylabel("Counts")
+#         ax.set_xlim(10, 510)
+#         continue
+#     # restrict data to the x-limit before histogramming
+#     data_clipped = data[(data >= 0.0) & (data <= 10.0)]
+#     ax.hist(data_clipped, bins=bins, alpha=0.8, color="C0")
+#     ax.set_title(c)
+#     ax.set_xlabel("E_true_ratio")
+#     ax.set_ylabel("Counts")
+#     ax.set_xlim(0, 2)
+#     ax.grid(alpha=0.2)
+
+# plt.tight_layout()
+# plt.savefig("E_true_ratio_histograms.png", dpi=150)
+# plt.show()
 
 # output_dir = "outputs/cafs"
 # os.makedirs(output_dir, exist_ok=True)
@@ -342,4 +415,6 @@ with open("df_full_output.txt", "w") as f:
     f.write(df.to_string(index=False))
 print(f"Full DataFrame written to {output_path}")
 # print(df_part.head(50))
+
+
 

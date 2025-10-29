@@ -151,14 +151,40 @@ def is_contained(start_x, start_y, start_z, stop_x, stop_y, stop_z, detector="TP
     active = ACTIVE_WALLS[detector]
     fiducial = FIDUCIAL_WALLS[detector]
     
-    # Check if starting point is within the fiducial volume
     in_fiducial = (fiducial["x_min"] <= start_x <= fiducial["x_max"] and
                    fiducial["y_min"] <= start_y <= fiducial["y_max"] and
                    fiducial["z_min"] <= start_z <= fiducial["z_max"])
     
-    # Check if stopping point is within the active volume
     in_active_volume = (active["x_min"] <= stop_x <= active["x_max"] and
                         active["y_min"] <= stop_y <= active["y_max"] and
                         active["z_min"] <= stop_z <= active["z_max"])
     
     return 1 if in_fiducial and in_active_volume else 0
+
+def compute_E_true_ratio(part, reco_energy_key):
+    common_list = part.get(reco_energy_key, [])
+    E_list = part.get('E', [])
+
+    if not isinstance(E_list, list):
+        E_list = [E_list] * len(common_list)
+    if len(E_list) < len(common_list):
+        E_list = E_list + [None] * (len(common_list) - len(E_list))
+
+    ratios = []
+    for ce, e in zip(common_list, E_list):
+        if e is None:
+            ratios.append(np.nan)
+            continue
+        try:
+            if ce is None:
+                ratios.append(np.nan)
+            elif isinstance(ce, list):
+                if e == 0:
+                    ratios.append([np.nan for _ in ce])
+                else:
+                    ratios.append([(c / e) if (c is not None) else np.nan for c in ce])
+            else:
+                ratios.append((ce / e) if e != 0 else np.nan)
+        except Exception:
+            ratios.append(np.nan)
+    return ratios
