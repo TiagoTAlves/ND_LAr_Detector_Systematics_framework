@@ -188,3 +188,50 @@ def compute_E_true_ratio(part, reco_energy_key):
         except Exception:
             ratios.append(np.nan)
     return ratios
+
+def filter_reco_lists(row):
+    pdg_list = row['common_dlp_pdg_reco']
+    contained_list = row['common_dlp_contained']
+    
+    if not (isinstance(pdg_list, (list, tuple)) and isinstance(contained_list, (list, tuple))):
+        return row
+    
+    matches = [i for i, (pdg, cont) in enumerate(zip(pdg_list, contained_list))
+               if abs(pdg) == abs(row['pdg']) and cont == row['is_contained']]
+    
+    if len(matches) == 0:
+        for col in row.index:
+            if isinstance(row[col], (list, tuple)):
+                row[col] = np.nan
+        return row
+    
+    if len(matches) == 1:
+        for col in row.index:
+            val = row[col]
+            if isinstance(val, (list, tuple)):
+                try:
+                    if len(val) == len(pdg_list):
+                        row[col] = val[matches[0]]
+                except Exception:
+                    pass
+        return row
+    
+    rows = []
+    reco_cols = [col for col in row.index if col.startswith('common_dlp_')]
+    
+    for match_idx in matches:
+        new_row = row.copy()
+        for col in row.index:
+            val = row[col]
+            if isinstance(val, (list, tuple)):
+                try:
+                    if len(val) == len(pdg_list):
+                        if col in reco_cols:
+                            new_row[col] = val[match_idx]
+                        else:
+                            new_row[col] = val[matches[0]]  # Use first match for non-reco
+                except Exception:
+                    pass
+        rows.append(new_row)
+    
+    return rows

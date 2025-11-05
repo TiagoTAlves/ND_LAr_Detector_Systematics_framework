@@ -4,6 +4,7 @@ import pandas as pd
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
+import uproot
 from caf_funcs import (
     MaCh3Modes_lookup,
     parse_args,
@@ -12,7 +13,8 @@ from caf_funcs import (
     E_method_lookup,
     update_df,
     is_contained,
-    compute_E_true_ratio
+    compute_E_true_ratio,
+    filter_reco_lists,
 )
 
 
@@ -95,8 +97,8 @@ part = {
     "pz": [],
     "is_contained": [],
     "E_true_ratio_common": [],
-    "E_true_ratio_track": [],
-    "E_true_ratio_shower": [],
+    # "E_true_ratio_track": [],
+    # "E_true_ratio_shower": [],
     # "E_kin_ratio": [],
     "common_dlp_contained": [],
     "common_dlp_pdg_reco": [],
@@ -113,27 +115,62 @@ part = {
     "common_dlp_pz_reco": [],
     "common_dlp_contained": [],    
     "common_dlp_truth_overlap": [],
-    "nd_lar_dlp_track_start_x": [],
-    "nd_lar_dlp_track_start_y": [],
-    "nd_lar_dlp_track_start_z": [],
-    "nd_lar_dlp_track_end_x": [],
-    "nd_lar_dlp_track_end_y": [],
-    "nd_lar_dlp_track_end_z": [],
-    "nd_lar_dlp_track_dir_x": [],
-    "nd_lar_dlp_track_dir_y": [],
-    "nd_lar_dlp_track_dir_z": [],
-    "nd_lar_dlp_track_len_cm": [],
-    "nd_lar_dlp_track_E_vis": [],
-    "nd_lar_dlp_track_E_reco": [],
-    "nd_lar_dlp_track_truth_overlap_E": [],
-    "nd_lar_dlp_shower_start_x": [],
-    "nd_lar_dlp_shower_start_y": [],
-    "nd_lar_dlp_shower_start_z": [],
-    "nd_lar_dlp_shower_dir_x": [],
-    "nd_lar_dlp_shower_dir_y": [],
-    "nd_lar_dlp_shower_dir_z": [],
-    "nd_lar_dlp_shower_E_vis": [],
-    "nd_lar_dlp_shower_truth_overlap_E": [],
+    # "nd_lar_dlp_track_start_x": [],
+    # "nd_lar_dlp_track_start_y": [],
+    # "nd_lar_dlp_track_start_z": [],
+    # "nd_lar_dlp_track_end_x": [],
+    # "nd_lar_dlp_track_end_y": [],
+    # "nd_lar_dlp_track_end_z": [],
+    # "nd_lar_dlp_track_dir_x": [],
+    # "nd_lar_dlp_track_dir_y": [],
+    # "nd_lar_dlp_track_dir_z": [],
+    # "nd_lar_dlp_track_len_cm": [],
+    # "nd_lar_dlp_track_E_vis": [],
+    # "nd_lar_dlp_track_E_reco": [],
+    # "nd_lar_dlp_track_truth_overlap_E": [],
+    # "nd_lar_dlp_shower_start_x": [],
+    # "nd_lar_dlp_shower_start_y": [],
+    # "nd_lar_dlp_shower_start_z": [],
+    # "nd_lar_dlp_shower_dir_x": [],
+    # "nd_lar_dlp_shower_dir_y": [],
+    # "nd_lar_dlp_shower_dir_z": [],
+    # "nd_lar_dlp_shower_E_vis": [],
+    # "nd_lar_dlp_shower_truth_overlap_E": [],
+}
+
+muon = {
+    "ID" : [],
+    "idx": [],
+    "part_type": [],
+    "part_idx": [],
+    "pdg":[],
+    "E": [],
+    "start_x": [],
+    "start_y": [],
+    "start_z": [],
+    "end_x": [],
+    "end_y": [],
+    "end_z": [],
+    "px": [],
+    "py": [],
+    "pz": [],
+    "is_contained": [],
+    "E_true_ratio_common": [],
+    "common_dlp_contained": [],
+    "common_dlp_pdg_reco": [],
+    "common_dlp_E_method": [],
+    "common_dlp_E": [],
+    "common_dlp_start_x": [],
+    "common_dlp_start_y": [],
+    "common_dlp_start_z": [],
+    "common_dlp_end_x": [],
+    "common_dlp_end_y": [],
+    "common_dlp_end_z": [],
+    "common_dlp_px_reco": [],
+    "common_dlp_py_reco": [],
+    "common_dlp_pz_reco": [],
+    "common_dlp_contained": [],    
+    "common_dlp_truth_overlap": [],
 }
 
 for root_file in root_files:
@@ -254,7 +291,6 @@ for root_file in root_files:
             if truth_vec_df and len(truth_vec_df) > 0:
                 for k in range(len(truth_vec_df)):
                     if common.ixn.dlp[j].truthOverlap[k] > 0.9:
-                        # t0 = truth_vec[k]
                         update_df(data, j, k, {
                             "common_dlp_reco_vtx_x": common.ixn.dlp[j].vtx.x,
                             "common_dlp_reco_vtx_y": common.ixn.dlp[j].vtx.y,
@@ -263,21 +299,19 @@ for root_file in root_files:
                         })
 
             for k in range(common.ixn.dlp[j].part.ndlp):
-                # data['common_reco_vtx_x'].append(common.ixn.dlp)
                 truth_vec = common.ixn.dlp[j].part.dlp[k].truth
                 if truth_vec and len(truth_vec) > 0:
                     for l in range(len(truth_vec)): 
                         if common.ixn.dlp[j].part.dlp[k].truthOverlap[l] > 0.9:
                             t0 = truth_vec[l]
                             update_part(part, t0.ixn, t0.type, t0.part, {
-                                "common_dlp_contained": common.ixn.dlp[j].part.dlp[k].contained,
+                                "common_dlp_contained": int(bool(common.ixn.dlp[j].part.dlp[k].contained)),
                                 "common_dlp_start_x": common.ixn.dlp[j].part.dlp[k].start.x,
                                 "common_dlp_start_y": common.ixn.dlp[j].part.dlp[k].start.y,
                                 "common_dlp_start_z": common.ixn.dlp[j].part.dlp[k].start.z,
                                 "common_dlp_end_x": common.ixn.dlp[j].part.dlp[k].end.x,
                                 "common_dlp_end_y": common.ixn.dlp[j].part.dlp[k].end.y,
                                 "common_dlp_end_z": common.ixn.dlp[j].part.dlp[k].end.z,
-                                "common_dlp_contained": common.ixn.dlp[j].part.dlp[k].contained,
                                 "common_dlp_E": common.ixn.dlp[j].part.dlp[k].E,
                                 "common_dlp_px_reco": common.ixn.dlp[j].part.dlp[k].p.x,
                                 "common_dlp_py_reco": common.ixn.dlp[j].part.dlp[k].p.y,
@@ -289,132 +323,97 @@ for root_file in root_files:
                 else:
                     pass
 
-        nd = record.nd
-        for j in range(nd.lar.ndlp):
-            for k in range(nd.lar.dlp[j].ntracks):
-                truth_vec = nd.lar.dlp[j].tracks[k].truth
-                if truth_vec and len(truth_vec) > 0:
-                    for l in range(len(truth_vec)): 
-                        if nd.lar.dlp[j].tracks[k].truthOverlap[l] > 0.9:
-                            t0 = truth_vec[l]
-                            update_part(part, t0.ixn, t0.type, t0.part, {
-                                "nd_lar_dlp_track_start_x": nd.lar.dlp[j].tracks[k].start.x,
-                                "nd_lar_dlp_track_start_y": nd.lar.dlp[j].tracks[k].start.y,
-                                "nd_lar_dlp_track_start_z": nd.lar.dlp[j].tracks[k].start.z,
-                                "nd_lar_dlp_track_end_x": nd.lar.dlp[j].tracks[k].end.x,
-                                "nd_lar_dlp_track_end_y": nd.lar.dlp[j].tracks[k].end.y,
-                                "nd_lar_dlp_track_end_z": nd.lar.dlp[j].tracks[k].end.z,
-                                "nd_lar_dlp_track_dir_x": nd.lar.dlp[j].tracks[k].dir.x,
-                                "nd_lar_dlp_track_dir_y": nd.lar.dlp[j].tracks[k].dir.y,
-                                "nd_lar_dlp_track_dir_z": nd.lar.dlp[j].tracks[k].dir.z,
-                                "nd_lar_dlp_track_len_cm": nd.lar.dlp[j].tracks[k].len_cm,
-                                "nd_lar_dlp_track_E_vis": nd.lar.dlp[j].tracks[k].Evis,
-                                "nd_lar_dlp_track_E_reco": nd.lar.dlp[j].tracks[k].E,
-                                "nd_lar_dlp_track_truth_overlap_E": nd.lar.dlp[j].tracks[k].truthOverlap[l]
-                            })
-                else:
-                    pass
+        # nd = record.nd
+        # for j in range(nd.lar.ndlp):
+        #     for k in range(nd.lar.dlp[j].ntracks):
+        #         truth_vec = nd.lar.dlp[j].tracks[k].truth
+        #         if truth_vec and len(truth_vec) > 0:
+        #             for l in range(len(truth_vec)): 
+        #                 if nd.lar.dlp[j].tracks[k].truthOverlap[l] > 0.9:
+        #                     t0 = truth_vec[l]
+        #                     update_part(part, t0.ixn, t0.type, t0.part, {
+        #                         "nd_lar_dlp_track_start_x": nd.lar.dlp[j].tracks[k].start.x,
+        #                         "nd_lar_dlp_track_start_y": nd.lar.dlp[j].tracks[k].start.y,
+        #                         "nd_lar_dlp_track_start_z": nd.lar.dlp[j].tracks[k].start.z,
+        #                         "nd_lar_dlp_track_end_x": nd.lar.dlp[j].tracks[k].end.x,
+        #                         "nd_lar_dlp_track_end_y": nd.lar.dlp[j].tracks[k].end.y,
+        #                         "nd_lar_dlp_track_end_z": nd.lar.dlp[j].tracks[k].end.z,
+        #                         "nd_lar_dlp_track_dir_x": nd.lar.dlp[j].tracks[k].dir.x,
+        #                         "nd_lar_dlp_track_dir_y": nd.lar.dlp[j].tracks[k].dir.y,
+        #                         "nd_lar_dlp_track_dir_z": nd.lar.dlp[j].tracks[k].dir.z,
+        #                         "nd_lar_dlp_track_len_cm": nd.lar.dlp[j].tracks[k].len_cm,
+        #                         "nd_lar_dlp_track_E_vis": nd.lar.dlp[j].tracks[k].Evis,
+        #                         "nd_lar_dlp_track_E_reco": nd.lar.dlp[j].tracks[k].E,
+        #                         "nd_lar_dlp_track_truth_overlap_E": nd.lar.dlp[j].tracks[k].truthOverlap[l]
+        #                     })
+        #         else:
+        #             pass
 
-            for k in range(nd.lar.dlp[j].nshowers):
-                truth_vec = nd.lar.dlp[j].showers[k].truth
-                if truth_vec and len(truth_vec) > 0:
-                    for l in range(len(truth_vec)): 
-                        if nd.lar.dlp[j].showers[k].truthOverlap[l] > 0.9:
-                            t0 = truth_vec[l]
-                            update_part(part, t0.ixn, t0.type, t0.part, {
-                                "nd_lar_dlp_showers_start_x": nd.lar.dlp[j].showers[k].start.x,
-                                "nd_lar_dlp_showers_start_y": nd.lar.dlp[j].showers[k].start.y,
-                                "nd_lar_dlp_showers_start_z": nd.lar.dlp[j].showers[k].start.z,
-                                "nd_lar_dlp_shower_dir_x": nd.lar.dlp[j].showers[k].direction.x,
-                                "nd_lar_dlp_shower_dir_y": nd.lar.dlp[j].showers[k].direction.y,
-                                "nd_lar_dlp_shower_dir_z": nd.lar.dlp[j].showers[k].direction.z,
-                                "nd_lar_dlp_shower_E_vis": nd.lar.dlp[j].showers[k].Evis,
-                                "nd_lar_dlp_shower_truth_overlap_E": nd.lar.dlp[j].showers[k].truthOverlap[l]
-                            })
-                else:
-                    pass                
+            # for k in range(nd.lar.dlp[j].nshowers):
+            #     truth_vec = nd.lar.dlp[j].showers[k].truth
+            #     if truth_vec and len(truth_vec) > 0:
+            #         for l in range(len(truth_vec)): 
+            #             if nd.lar.dlp[j].showers[k].truthOverlap[l] > 0.9:
+            #                 t0 = truth_vec[l]
+            #                 update_part(part, t0.ixn, t0.type, t0.part, {
+            #                     "nd_lar_dlp_showers_start_x": nd.lar.dlp[j].showers[k].start.x,
+            #                     "nd_lar_dlp_showers_start_y": nd.lar.dlp[j].showers[k].start.y,
+            #                     "nd_lar_dlp_showers_start_z": nd.lar.dlp[j].showers[k].start.z,
+            #                     "nd_lar_dlp_shower_dir_x": nd.lar.dlp[j].showers[k].direction.x,
+            #                     "nd_lar_dlp_shower_dir_y": nd.lar.dlp[j].showers[k].direction.y,
+            #                     "nd_lar_dlp_shower_dir_z": nd.lar.dlp[j].showers[k].direction.z,
+            #                     "nd_lar_dlp_shower_E_vis": nd.lar.dlp[j].showers[k].Evis,
+            #                     "nd_lar_dlp_shower_truth_overlap_E": nd.lar.dlp[j].showers[k].truthOverlap[l]
+            #                 })
+            #     else:
+            #         pass                
 
-# part['E_true_ratio_common'] = compute_E_true_ratio(part, 'common_dlp_E')
-# part["E_true_ratio_track"] = compute_E_true_ratio(part, 'nd_lar_dlp_track_E_reco')
-# part["E_true_ratio_shower"] = compute_E_true_ratio(part, 'nd_lar_dlp_shower_E_vis')
+part['E_true_ratio_common'] = compute_E_true_ratio(part, 'common_dlp_E')
+
 
 pad_dict_lists_to_same_length(data)
 pad_dict_lists_to_same_length(part)
 df = pd.DataFrame(data)
 df_part = pd.DataFrame(part)
 
-# import math
-# def _flatten_item(x):
-#     if x is None:
-#         return []
-#     if isinstance(x, (list, tuple)):
-#         out = []
-#         for y in x:
-#             out.extend(_flatten_item(y))
-#         return out
-#     return [x]
+filtered_rows = []
+for _, row in df_part.iterrows():
+    result = filter_reco_lists(row)
+    if isinstance(result, list):
+        filtered_rows.extend(result)  
+    else:
+        filtered_rows.append(result) 
+df_part_filtered = pd.DataFrame(filtered_rows)
 
-# def flatten_column_to_floats(df, col):
-#     vals = []
-#     for v in df.get(col, []):
-#         for x in _flatten_item(v):
-#             try:
-#                 if x is None:
-#                     continue
-#                 xf = float(x)
-#                 if math.isnan(xf):
-#                     continue
-#                 vals.append(xf)
-#             except Exception:
-#                 continue
-#     return np.array(vals)
+mask = (
+    (df_part_filtered['pdg'].isin([111, -111])) &
+    (df_part_filtered['is_contained'] == 1)
+)
+df_muon = df_part_filtered[mask].dropna().copy()
 
-# cols = ["E_true_ratio_common", "E_true_ratio_track", "E_true_ratio_shower"]
-# flat_data = {c: flatten_column_to_floats(df_part, c) for c in cols}
+output_dir = "outputs/cafs"
+os.makedirs(output_dir, exist_ok=True)
+output_file = f"{output_dir}/pion0/caf_pion0_output{'_chunk_'+str(chunk_index) if not interactive else ''}.root"
 
-# fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-# bins = np.linspace(10.0, 510.0, 51)
-# for ax, c in zip(axes, cols):
-#     data = flat_data[c]
-#     if data.size == 0:
-#         ax.text(0.5, 0.5, "no data", ha="center", va="center")
-#         ax.set_title(c)
-#         ax.set_xlabel("E_true_ratio")
-#         ax.set_ylabel("Counts")
-#         ax.set_xlim(10, 510)
-#         continue
-#     # restrict data to the x-limit before histogramming
-#     data_clipped = data[(data >= 0.0) & (data <= 10.0)]
-#     ax.hist(data_clipped, bins=bins, alpha=0.8, color="C0")
-#     ax.set_title(c)
-#     ax.set_xlabel("E_true_ratio")
-#     ax.set_ylabel("Counts")
-#     ax.set_xlim(0, 2)
-#     ax.grid(alpha=0.2)
+index_cols = ["ID", "idx", "part_idx"]
+if all(c in df_muon.columns for c in index_cols):
+    df_muon = df_muon.set_index(index_cols)
 
-# plt.tight_layout()
-# plt.savefig("E_true_ratio_histograms.png", dpi=150)
-# plt.show()
+with uproot.recreate(output_file) as f:
+    f["pion0_tree"] = df_muon.reset_index()
 
-# output_dir = "outputs/cafs"
-# os.makedirs(output_dir, exist_ok=True)
-# if interactive:
-#     output_file = f"{output_dir}/caf_output_all.root"
-# else:
-#     output_file = f"{output_dir}/caf_output_chunk{chunk_index}.root"
 
-# print(df.head(30))
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
-pd.set_option('display.max_colwidth', None)
-output_path = "df_part_full_output.txt"
-with open(output_path, "w") as f:
-    f.write(df_part.to_string(index=False))
-with open("df_full_output.txt", "w") as f:
-    f.write(df.to_string(index=False))
-print(f"Full DataFrame written to {output_path}")
-# print(df_part.head(50))
+# pd.set_option('display.max_rows', None)
+# pd.set_option('display.max_columns', None)
+# pd.set_option('display.width', None)
+# pd.set_option('display.max_colwidth', None)
+# output_path = "df_muon_part_full_output.txt"
+# with open(output_path, "w") as f:
+#     f.write(df_muon.to_string(index=False))
+# # with open("df_full_part_output.txt", "w") as f:
+# #     f.write(df_part.to_string(index=False))
+# print(f"Full DataFrame written to {output_path}")
+# # print(df_part.head(50))
 
 
 

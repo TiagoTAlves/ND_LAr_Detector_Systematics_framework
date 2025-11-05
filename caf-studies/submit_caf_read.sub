@@ -1,0 +1,14 @@
+# submit_caf_read.sub
+universe        = vanilla
+executable      = run_caf_read.sh
+arguments       = $(Process) 1
+output          = logs/caf_read_$(Process).out
+error           = logs/caf_read_$(Process).err
+log             = logs/caf_read_$(Process).log
+request_cpus    = 1
+request_memory  = 4GB
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+initialdir      = /vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/caf-studies
++MaxRuntime = 14400
+queue 99
