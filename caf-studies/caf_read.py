@@ -14,7 +14,9 @@ from caf_funcs import (
     update_df,
     is_contained,
     compute_E_true_ratio,
+    compute_E_kin_ratio,
     filter_reco_lists,
+    pdg_to_particle_mass,
 )
 
 
@@ -86,6 +88,7 @@ part = {
     "part_idx": [],
     "pdg":[],
     "E": [],
+    "E_kin": [],
     "start_x": [],
     "start_y": [],
     "start_z": [],
@@ -97,9 +100,7 @@ part = {
     "pz": [],
     "is_contained": [],
     "E_true_ratio_common": [],
-    # "E_true_ratio_track": [],
-    # "E_true_ratio_shower": [],
-    # "E_kin_ratio": [],
+    "E_kin_ratio_common": [],
     "common_dlp_contained": [],
     "common_dlp_pdg_reco": [],
     "common_dlp_E_method": [],
@@ -138,47 +139,16 @@ part = {
     # "nd_lar_dlp_shower_truth_overlap_E": [],
 }
 
-muon = {
-    "ID" : [],
-    "idx": [],
-    "part_type": [],
-    "part_idx": [],
-    "pdg":[],
-    "E": [],
-    "start_x": [],
-    "start_y": [],
-    "start_z": [],
-    "end_x": [],
-    "end_y": [],
-    "end_z": [],
-    "px": [],
-    "py": [],
-    "pz": [],
-    "is_contained": [],
-    "E_true_ratio_common": [],
-    "common_dlp_contained": [],
-    "common_dlp_pdg_reco": [],
-    "common_dlp_E_method": [],
-    "common_dlp_E": [],
-    "common_dlp_start_x": [],
-    "common_dlp_start_y": [],
-    "common_dlp_start_z": [],
-    "common_dlp_end_x": [],
-    "common_dlp_end_y": [],
-    "common_dlp_end_z": [],
-    "common_dlp_px_reco": [],
-    "common_dlp_py_reco": [],
-    "common_dlp_pz_reco": [],
-    "common_dlp_contained": [],    
-    "common_dlp_truth_overlap": [],
-}
-
 for root_file in root_files:
     tFile = ROOT.TFile.Open(root_file)
     tree = tFile.Get("cafTree")
+    genie = tFile.Get("genieEvt")
 
     record = ROOT.caf.StandardRecord()
     tree.SetBranchAddress("rec", record)
+    tree.SetBranchAddress()
+
+    tree
 
     nspills = tree.GetEntries()
     print(f"Processing file:{root_file}, Total entries: {nspills}")
@@ -216,6 +186,7 @@ for root_file in root_files:
                 data["nprefsi"].append(mc.nu[j].nprefsi)
 
                 for k in range(mc.nu[j].nprim):
+                    mass = pdg_to_particle_mass(mc.nu[j].prim[k].pdg)/1000
                     part["ID"].append(mc.nu[j].id)
                     part["idx"].append(j)
                     part["part_type"].append(1)
@@ -228,6 +199,7 @@ for root_file in root_files:
                     part["end_y"].append(mc.nu[j].prim[k].end_pos.y)
                     part["end_z"].append(mc.nu[j].prim[k].end_pos.z)
                     part["E"].append(mc.nu[j].prim[k].p.E)
+                    part["E_kin"].append(mc.nu[j].prim[k].p.E - mass)
                     part["px"].append(mc.nu[j].prim[k].p.px)
                     part["py"].append(mc.nu[j].prim[k].p.py)
                     part["pz"].append(mc.nu[j].prim[k].p.pz)
@@ -239,6 +211,7 @@ for root_file in root_files:
                                                             mc.nu[j].prim[k].end_pos.z,
                                                             detector="TPC"))
                 for k in range(mc.nu[j].nprefsi):
+                    mass = pdg_to_particle_mass(mc.nu[j].prefsi[k].pdg)/1000
                     part["ID"].append(mc.nu[j].id)
                     part["idx"].append(j)
                     part["part_type"].append(2)
@@ -251,6 +224,7 @@ for root_file in root_files:
                     part["end_y"].append(mc.nu[j].prefsi[k].end_pos.y)
                     part["end_z"].append(mc.nu[j].prefsi[k].end_pos.z)
                     part["E"].append(mc.nu[j].prefsi[k].p.E)
+                    part["E_kin"].append(mc.nu[j].prefsi[k].p.E - mass)
                     part["px"].append(mc.nu[j].prefsi[k].p.px)
                     part["py"].append(mc.nu[j].prefsi[k].p.py)
                     part["pz"].append(mc.nu[j].prefsi[k].p.pz)
@@ -262,6 +236,7 @@ for root_file in root_files:
                                                             mc.nu[j].prefsi[k].end_pos.z,
                                                             detector="TPC"))
                 for k in range(mc.nu[j].nsec):
+                    mass = pdg_to_particle_mass(mc.nu[j].sec[k].pdg)/1000
                     part["ID"].append(mc.nu[j].id)
                     part["idx"].append(j)
                     part["part_type"].append(3)
@@ -274,6 +249,7 @@ for root_file in root_files:
                     part["end_y"].append(mc.nu[j].sec[k].end_pos.y)
                     part["end_z"].append(mc.nu[j].sec[k].end_pos.z)
                     part["E"].append(mc.nu[j].sec[k].p.E)
+                    part["E_kin"].append(mc.nu[j].sec[k].p.E - mass)
                     part["px"].append(mc.nu[j].sec[k].p.px)
                     part["py"].append(mc.nu[j].sec[k].p.py)
                     part["pz"].append(mc.nu[j].sec[k].p.pz)
@@ -369,6 +345,7 @@ for root_file in root_files:
             #         pass                
 
 part['E_true_ratio_common'] = compute_E_true_ratio(part, 'common_dlp_E')
+part['E_kin_ratio_common'] = compute_E_kin_ratio(part, 'common_dlp_E')
 
 
 pad_dict_lists_to_same_length(data)
@@ -386,34 +363,34 @@ for _, row in df_part.iterrows():
 df_part_filtered = pd.DataFrame(filtered_rows)
 
 mask = (
-    (df_part_filtered['pdg'].isin([111, -111])) &
+    (df_part_filtered['pdg'].isin([-11, 11])) &
     (df_part_filtered['is_contained'] == 1)
 )
-df_muon = df_part_filtered[mask].dropna().copy()
+df_part_filtered_final = df_part_filtered[mask].dropna().copy()
 
 output_dir = "outputs/cafs"
 os.makedirs(output_dir, exist_ok=True)
-output_file = f"{output_dir}/pion0/caf_pion0_output{'_chunk_'+str(chunk_index) if not interactive else ''}.root"
+output_file = f"{output_dir}/electron/caf_electron_output{'_chunk_'+str(chunk_index) if not interactive else ''}.root"
 
 index_cols = ["ID", "idx", "part_idx"]
-if all(c in df_muon.columns for c in index_cols):
-    df_muon = df_muon.set_index(index_cols)
+if all(c in df_part_filtered_final.columns for c in index_cols):
+    df_part_filtered_final = df_part_filtered_final.set_index(index_cols)
 
 with uproot.recreate(output_file) as f:
-    f["pion0_tree"] = df_muon.reset_index()
+    f["electron_tree"] = df_part_filtered_final.reset_index()
 
 
-# pd.set_option('display.max_rows', None)
-# pd.set_option('display.max_columns', None)
-# pd.set_option('display.width', None)
-# pd.set_option('display.max_colwidth', None)
-# output_path = "df_muon_part_full_output.txt"
-# with open(output_path, "w") as f:
-#     f.write(df_muon.to_string(index=False))
-# # with open("df_full_part_output.txt", "w") as f:
-# #     f.write(df_part.to_string(index=False))
-# print(f"Full DataFrame written to {output_path}")
-# # print(df_part.head(50))
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', None)
+output_path = "df_part_filtered_final_part_full_output.txt"
+with open(output_path, "w") as f:
+    f.write(df_part_filtered_final.to_string(index=False))
+# with open("df_full_part_output.txt", "w") as f:
+#     f.write(df_part.to_string(index=False))
+print(f"Full DataFrame written to {output_path}")
+# print(df_part.head(50))
 
 
 

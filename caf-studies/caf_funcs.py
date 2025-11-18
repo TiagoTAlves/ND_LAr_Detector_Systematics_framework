@@ -1,6 +1,7 @@
 import argparse
 import sys
 import numpy as np
+from particle import Particle
 
 def E_method_lookup(value):
     E_method_modes = [
@@ -78,6 +79,16 @@ def parse_args():
         return None, None, True
     else:
         return args.chunk, args.chunksize, False
+
+def pdg_to_particle_mass(pdg_code): # MeV/c^2
+    try:
+        particle = Particle.from_pdgid(pdg_code)
+        if particle.mass is None:
+            return 0
+        else:
+            return particle.mass
+    except Exception:
+        return 0
 
 def update_part(part_dict, j, k, l, updates):
     indices = [i for i, (idx_val, pt_val, pidx_val) in enumerate(zip(part_dict["idx"], part_dict["part_type"], part_dict["part_idx"]))
@@ -164,6 +175,34 @@ def is_contained(start_x, start_y, start_z, stop_x, stop_y, stop_z, detector="TP
 def compute_E_true_ratio(part, reco_energy_key):
     common_list = part.get(reco_energy_key, [])
     E_list = part.get('E', [])
+
+    if not isinstance(E_list, list):
+        E_list = [E_list] * len(common_list)
+    if len(E_list) < len(common_list):
+        E_list = E_list + [None] * (len(common_list) - len(E_list))
+
+    ratios = []
+    for ce, e in zip(common_list, E_list):
+        if e is None:
+            ratios.append(np.nan)
+            continue
+        try:
+            if ce is None:
+                ratios.append(np.nan)
+            elif isinstance(ce, list):
+                if e == 0:
+                    ratios.append([np.nan for _ in ce])
+                else:
+                    ratios.append([(c / e) if (c is not None) else np.nan for c in ce])
+            else:
+                ratios.append((ce / e) if e != 0 else np.nan)
+        except Exception:
+            ratios.append(np.nan)
+    return ratios
+
+def compute_E_kin_ratio(part, reco_energy_key):
+    common_list = part.get(reco_energy_key, [])
+    E_list = part.get('E_kin', [])
 
     if not isinstance(E_list, list):
         E_list = [E_list] * len(common_list)
