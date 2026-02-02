@@ -2,6 +2,12 @@ import argparse
 import sys
 import numpy as np
 from particle import Particle
+from pathlib import Path
+import yaml
+import ROOT
+import os
+import glob
+import pandas as pd
 
 def E_method_lookup(value):
     E_method_modes = [
@@ -80,6 +86,100 @@ def parse_args():
     else:
         return args.chunk, args.chunksize, False
 
+def parse_args_yaml():
+    parser = argparse.ArgumentParser(description="Process CAF ROOT files in chunks.")
+    parser.add_argument('--chunk', type=int, help='Chunk index to process')
+    parser.add_argument('--chunksize', type=int, default=10, help='Number of files per chunk')
+    parser.add_argument('--selections', type=str, default="selections.yaml", help="Path to YAML selections file.")
+    args = parser.parse_args()
+
+    if len(sys.argv) == 1:
+        # Interactive mode
+        return None, None, 'selections.yaml', True
+    else:
+        return args.chunk, args.chunksize, args.selections, False
+
+def load_config(path: str) -> dict:
+    """Load YAML config into a Python dict."""
+    cfg_path = Path(path)
+    if not cfg_path.is_file():
+        raise FileNotFoundError(f"Selections file not found: {cfg_path}")
+    with cfg_path.open("r") as f:
+        config = yaml.safe_load(f)
+    if not isinstance(config, dict):
+        raise ValueError("Top-level YAML must be a mapping (dictionary).")
+    return config
+
+def load_standard_record_libs(standard_record_libs_path: str):
+    """Load StandardRecord libraries and headers."""
+    ROOT.gErrorIgnoreLevel = ROOT.kError
+    
+    lib_path = f"{standard_record_libs_path}/libduneanaobj_StandardRecord.so"
+    if not os.path.exists(lib_path):
+        raise FileNotFoundError(f"Library missing: {lib_path}")
+    
+    ROOT.gSystem.Load(lib_path)
+    
+    header_dir = f"{standard_record_libs_path}duneanaobj/StandardRecord"
+    header_files = glob.glob(os.path.join(header_dir, "*.h"))
+    print(f"Loading {len(header_files)} headers from {header_dir}")
+    
+    for header in header_files:
+        ROOT.gInterpreter.ProcessLine(f'#include "{header}"')
+
+def apply_particle_cuts(df, cuts_cfg):
+    if not cuts_cfg:
+        return df.copy()
+
+    mask = pd.Series(True, index=df.index)
+
+    for var_name, cut_params in cuts_cfg.items():
+        if var_name == "pdg":
+            mask &= df['pdg'].isin(cut_params)
+            continue
+            
+        if var_name == "is_contained":
+            mask &= (df['is_contained'] == int(cut_params))
+            continue
+
+        if var_name == "common_dlp_E_method":
+            if isinstance(cut_params, list):
+                method_indices = [E_method_lookup(m) for m in cut_params]
+                mask &= df['common_dlp_E_method'].isin(method_indices)
+            else:
+                method_index = E_method_lookup(cut_params)
+                mask &= (df['common_dlp_E_method'] == method_index)
+            continue
+        
+        if var_name in df.columns:
+            if isinstance(cut_params, dict):
+                if "min" in cut_params:
+                    mask &= (df[var_name] >= cut_params["min"])
+                if "max" in cut_params:
+                    mask &= (df[var_name] <= cut_params["max"])
+        else:
+            print(f"Warning: Cut defined for '{var_name}', but it is not in the DataFrame.")
+
+    return df[mask].copy()
+
+def apply_event_cuts(df, cuts_cfg):
+    if not cuts_cfg:
+        return df.copy()
+
+    mask = pd.Series(True, index=df.index)
+
+    for var_name, cut_params in cuts_cfg.items():
+        if var_name in df.columns:
+            if isinstance(cut_params, dict):
+                if "min" in cut_params:
+                    mask &= (df[var_name] >= cut_params["min"])
+                if "max" in cut_params:
+                    mask &= (df[var_name] <= cut_params["max"])
+        else:
+            print(f"Warning: Cut defined for '{var_name}', but it is not in the DataFrame.")
+
+    return df[mask].copy()
+
 def pdg_to_particle_mass(pdg_code): # MeV/c^2
     try:
         particle = Particle.from_pdgid(pdg_code)
@@ -153,7 +253,7 @@ FIDUCIAL_WALLS = {
         "x_max": 300.0, 
         "y_min": -200.0,
         "y_max": 80.0,  
-        "z_min": 400.0, 
+        "z_min": 450.0, 
         "z_max": 900.0, 
     }
 }

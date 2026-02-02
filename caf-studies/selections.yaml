@@ -1,0 +1,41 @@
+# mode: "particle"  # options: event | particle
+mode: "event"
+# detector: "lar"
+caf:
+  StandardRecordLibs: "/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/caf-studies/duneanaobj/"
+  root_dir: "/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/input-root-files/CAF/run-cafmaker/MicroProdN4p1_NDComplex_FHC.caf.full.light.spineonly/CAF/0002000/"
+  # root_file: "/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/input-root-files/CAF/run-cafmaker/MicroProdN4p1_NDComplex_FHC.caf.full.light.spineonly/CAF/0002000/MicroProdN4p1_NDComplex_FHC.caf.full.light.spineonly.0002459.CAF.root"
+# particle_cuts:
+#   # Use the names of the variables as defined in caf_read_yaml.py
+#   pdg: [-13,13]
+#   E:
+#     min: 3.0
+#   px:
+#     min: 0.2
+#     max: 10.0
+#   py:
+#     min: 0.2
+#     max: 10.0
+#   pz:
+#     min: 0.2
+#     max: 10.0
+
+  
+event_cuts:
+  # Use the names of the variables as defined in caf_read_yaml.py
+  mc_nupdg: [-12,12]
+  E_tru:
+    min: 0.0
+    max: 10.0
+  reco_vtx_x:
+    min: -200.0
+    max: 200.0
+  reco_vtx_y:
+    min: -150.0
+    max: 150.0
+  reco_vtx_z:
+    min: 450.0
+    max: 900.0
+  npip:
+    min: 0
+    max: 2
