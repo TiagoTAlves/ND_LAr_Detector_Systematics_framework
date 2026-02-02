@@ -274,3 +274,145 @@ def filter_reco_lists(row):
         rows.append(new_row)
     
     return rows
+
+
+def analyze_exclusion_zones(x_exclude_full=None, z_exclude=None, module_boundaries_x=None):
+    """
+    Analyze exclusion zones and calculate module boundary crossings.
+    
+    Parameters:
+    -----------
+    x_exclude_full : list, optional
+        X-coordinates of full-width exclusion zone centers (cm)
+        Default: [3500, 2500, 1500, 500, -500, -1500, -2500]
+    z_exclude : list, optional
+        Z-coordinates of exclusion zone centers (cm)
+        Default: [5157.559, 6157.559, 7157.559, 8157.559]
+    module_boundaries_x : list, optional
+        X-coordinates of module boundaries (cm)
+        Default: [-3478.48, -1750, 0, 1750, 3478.48]
+    
+    Returns:
+    --------
+    dict : Dictionary containing:
+        - 'x_exclusions': DataFrame with x exclusion analysis
+        - 'z_exclusions': DataFrame with z exclusion analysis
+        - 'total_boundaries_crossed': Total module boundary crossings
+        - 'summary': Dictionary with summary statistics
+    """
+    import numpy as np
+    import pandas as pd
+    
+    if x_exclude_full is None:
+        x_exclude_full = [3500, 2500, 1500, 500, -500, -1500, -2500]
+    if z_exclude is None:
+        z_exclude = [5157.559, 6157.559, 7157.559, 8157.559]
+    if module_boundaries_x is None:
+        module_boundaries_x = [-3478.48, -1750, 0, 1750, 3478.48]
+    
+    full_width = 28.915  # cm
+    z_width = 5  # cm
+    
+    # Analyze x exclusions
+    x_exclusion_data = []
+    for i, xc in enumerate(x_exclude_full, 1):
+        x_start = xc - full_width
+        x_end = xc + full_width
+        
+        boundaries_crossed = 0
+        crossed_boundaries = []
+        for boundary in module_boundaries_x:
+            if x_start < boundary < x_end:
+                boundaries_crossed += 1
+                crossed_boundaries.append(boundary)
+        
+        x_exclusion_data.append({
+            'Region': i,
+            'Center_X': xc,
+            'X_Start': x_start,
+            'X_End': x_end,
+            'Width': x_end - x_start,
+            'Boundaries_Crossed': boundaries_crossed,
+            'Boundary_Locations': crossed_boundaries
+        })
+    
+    df_x = pd.DataFrame(x_exclusion_data)
+    
+    # Analyze z exclusions
+    z_exclusion_data = []
+    for i, zc in enumerate(z_exclude, 1):
+        z_start = zc - z_width
+        z_end = zc + z_width
+        
+        z_exclusion_data.append({
+            'Region': i,
+            'Center_Z': zc,
+            'Z_Start': z_start,
+            'Z_End': z_end,
+            'Width': z_end - z_start
+        })
+    
+    df_z = pd.DataFrame(z_exclusion_data)
+    
+    # Calculate summary statistics
+    total_boundaries = df_x['Boundaries_Crossed'].sum()
+    
+    summary = {
+        'num_x_exclusions': len(x_exclude_full),
+        'num_z_exclusions': len(z_exclude),
+        'total_2d_regions': len(x_exclude_full) * len(z_exclude),
+        'total_boundary_crossings': total_boundaries,
+        'avg_boundaries_per_region': total_boundaries / len(x_exclude_full) if len(x_exclude_full) > 0 else 0,
+        'full_width': full_width,
+        'z_width': z_width
+    }
+    
+    return {
+        'x_exclusions': df_x,
+        'z_exclusions': df_z,
+        'total_boundaries_crossed': total_boundaries,
+        'summary': summary
+    }
+
+
+def calculate_module_crossings(df, x_exclude_full=None, z_exclude=None, module_boundaries_x=None):
+    """
+    Calculate the number of module boundaries crossed for each particle's trajectory.
+    
+    Parameters:
+    -----------
+    df : pandas.DataFrame
+        DataFrame with particle data containing 'start_x', 'end_x' columns
+    x_exclude_full : list, optional
+        X-coordinates of full-width exclusion zone centers
+    z_exclude : list, optional
+        Z-coordinates of exclusion zone centers
+    module_boundaries_x : list, optional
+        X-coordinates of module boundaries
+    
+    Returns:
+    --------
+    pandas.Series : Number of module boundaries crossed for each particle
+    """
+    import numpy as np
+    
+    if module_boundaries_x is None:
+        module_boundaries_x = [-3478.48, -1750, 0, 1750, 3478.48]
+    
+    def count_boundaries_crossed(start_x, end_x, boundaries):
+        """Count how many module boundaries are between start_x and end_x"""
+        x_min = min(start_x, end_x)
+        x_max = max(start_x, end_x)
+        count = 0
+        for boundary in boundaries:
+            if x_min < boundary < x_max:
+                count += 1
+        return count
+    
+    # Calculate boundaries crossed for each particle
+    boundaries_crossed = df.apply(
+        lambda row: count_boundaries_crossed(row['start_x'], row['end_x'], module_boundaries_x),
+        axis=1
+    )
+    
+    return boundaries_crossed

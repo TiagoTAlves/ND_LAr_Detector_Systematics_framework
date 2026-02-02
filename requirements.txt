@@ -5,3 +5,5 @@ particle
 numpy
 uproot
 scipy
+iminuit
+yaml

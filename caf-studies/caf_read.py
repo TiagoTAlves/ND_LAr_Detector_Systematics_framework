@@ -146,9 +146,6 @@ for root_file in root_files:
 
     record = ROOT.caf.StandardRecord()
     tree.SetBranchAddress("rec", record)
-    tree.SetBranchAddress()
-
-    tree
 
     nspills = tree.GetEntries()
     print(f"Processing file:{root_file}, Total entries: {nspills}")
@@ -363,21 +360,21 @@ for _, row in df_part.iterrows():
 df_part_filtered = pd.DataFrame(filtered_rows)
 
 mask = (
-    (df_part_filtered['pdg'].isin([-11, 11])) &
+    (df_part_filtered['pdg'].isin([-22, 22])) &
     (df_part_filtered['is_contained'] == 1)
 )
 df_part_filtered_final = df_part_filtered[mask].dropna().copy()
 
 output_dir = "outputs/cafs"
 os.makedirs(output_dir, exist_ok=True)
-output_file = f"{output_dir}/electron/caf_electron_output{'_chunk_'+str(chunk_index) if not interactive else ''}.root"
+output_file = f"{output_dir}/photon/caf_photon_output{'_chunk_'+str(chunk_index) if not interactive else ''}.root"
 
 index_cols = ["ID", "idx", "part_idx"]
 if all(c in df_part_filtered_final.columns for c in index_cols):
     df_part_filtered_final = df_part_filtered_final.set_index(index_cols)
 
 with uproot.recreate(output_file) as f:
-    f["electron_tree"] = df_part_filtered_final.reset_index()
+    f["photon_tree"] = df_part_filtered_final.reset_index()
 
 
 pd.set_option('display.max_rows', None)
@@ -391,6 +388,3 @@ with open(output_path, "w") as f:
 #     f.write(df_part.to_string(index=False))
 print(f"Full DataFrame written to {output_path}")
 # print(df_part.head(50))
-
-
-
