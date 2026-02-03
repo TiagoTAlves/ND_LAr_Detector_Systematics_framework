@@ -4,12 +4,10 @@ caf:
   StandardRecordLibs: "/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/caf-studies/duneanaobj/"
   root_dir: "/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/input-root-files/CAF/run-cafmaker/MicroProdN4p1_NDComplex_FHC.caf.full.light.spineonly/CAF/0002000/"
   # root_file: "/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/input-root-files/CAF/run-cafmaker/MicroProdN4p1_NDComplex_FHC.caf.full.light.spineonly/CAF/0002000/MicroProdN4p1_NDComplex_FHC.caf.full.light.spineonly.0002459.CAF.root"
+  reco_sw: "pandora" # options: dlp | pandora
 particle_cuts:
   # Use the names of the variables as defined in caf_read_yaml.py
   pdg: [-211,211]
-  E:
-    min: 3.0
-    max: 5.0
   px:
     min: 0.2
     max: 10.0
@@ -22,6 +20,6 @@ particle_cuts:
 
 output:
   out_dir: "./outputs/cafs/particle_selections/"
-  out_filename: "particle_selection_test" # DO NOT END WITH .ROOT
+  out_filename: "selection_test" # DO NOT END WITH .ROOT
 
 

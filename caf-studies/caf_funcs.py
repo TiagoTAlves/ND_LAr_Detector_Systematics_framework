@@ -154,9 +154,9 @@ def apply_particle_cuts(df, cuts_cfg):
         if var_name in df.columns:
             if isinstance(cut_params, dict):
                 if "min" in cut_params:
-                    mask &= (df[var_name] >= cut_params["min"])
+                    mask &= (df[var_name].isna() | (df[var_name] >= cut_params["min"]))
                 if "max" in cut_params:
-                    mask &= (df[var_name] <= cut_params["max"])
+                    mask &= (df[var_name].isna() | (df[var_name] <= cut_params["max"]))
         else:
             print(f"Warning: Cut defined for '{var_name}', but it is not in the DataFrame.")
 
@@ -172,9 +172,9 @@ def apply_event_cuts(df, cuts_cfg):
         if var_name in df.columns:
             if isinstance(cut_params, dict):
                 if "min" in cut_params:
-                    mask &= (df[var_name] >= cut_params["min"])
+                    mask &= (df[var_name].isna() | (df[var_name] >= cut_params["min"]))
                 if "max" in cut_params:
-                    mask &= (df[var_name] <= cut_params["max"])
+                    mask &= (df[var_name].isna() | (df[var_name] <= cut_params["max"]))
         else:
             print(f"Warning: Cut defined for '{var_name}', but it is not in the DataFrame.")
 

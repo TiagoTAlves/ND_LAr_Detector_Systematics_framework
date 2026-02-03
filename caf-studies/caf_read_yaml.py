@@ -26,10 +26,14 @@ caf_cfg = config.get("caf", {})
 StandardRecordLibs = caf_cfg.get("StandardRecordLibs")
 mode = config.get("mode")
 detector = config.get("detector")
+reco_sw = config.get("caf").get("reco_sw") # for now let dlp be default
+print(f"Using reconstruction software: {reco_sw}")
 
 
 if StandardRecordLibs is None:
-    raise ValueError("Location of StandardRecordLibs must be set in selections.yaml")
+    raise ValueError("Location of StandardRecordLibs must be set in a selections.yaml file")
+
+
 
 load_standard_record_libs(StandardRecordLibs)
 
@@ -135,8 +139,8 @@ elif mode == "particle":
         "reco_end_y": [],
         "reco_end_z": [],
         "reco_length": [],
-        "common_dlp_truth_overlap": [],
-        "nd_lar_dlp_truth_overlap": [],
+        f"common_truth_overlap": [],
+        f"nd_lar_truth_overlap": [],
     }
 
 else:
@@ -197,23 +201,26 @@ if mode == "event":
                         data["E_reco_e_calo"].append(np.nan)
                         data["E_reco_regcnn"].append(np.nan)
 
-                    for j in range(common.ixn.ndlp):
-                        dlp_obj = common.ixn.dlp[j]
-                        for k in range(len(dlp_obj.truth)):
-                            matched_nu_id = int(dlp_obj.truth[k])
-                            overlap = dlp_obj.truthOverlap[k]
+                    reco_sw_obj = getattr(common.ixn, reco_sw)
+                    nreco_sw_obj = getattr(common.ixn, f"n{reco_sw}")
+                    print(f"  Spill {i}: found {nreco_sw_obj} reconstructed {reco_sw} objects")
+                    for j in range(nreco_sw_obj):
+                        sw_obj = reco_sw_obj[j]
+                        for k in range(len(sw_obj.truth)):
+                            matched_nu_id = int(sw_obj.truth[k])
+                            overlap = sw_obj.truthOverlap[k]
                             if matched_nu_id in spill_index_to_data_row:
                                 target_row = spill_index_to_data_row[matched_nu_id]
                                 if overlap > data["truth_overlap"][target_row]:
-                                    data["E_reco_calo"][target_row] = dlp_obj.Enu.calo
-                                    data["E_reco_lep_calo"][target_row] = dlp_obj.Enu.lep_calo
-                                    data["E_reco_mu_range"][target_row] = dlp_obj.Enu.mu_range
-                                    data["E_reco_mu_mcs"][target_row] = dlp_obj.Enu.mu_mcs
-                                    data["E_reco_e_calo"][target_row] = dlp_obj.Enu.e_calo
-                                    data["E_reco_regcnn"][target_row] = dlp_obj.Enu.regcnn
-                                    data["reco_vtx_x"][target_row] = dlp_obj.vtx.x
-                                    data["reco_vtx_y"][target_row] = dlp_obj.vtx.y
-                                    data["reco_vtx_z"][target_row] = dlp_obj.vtx.z
+                                    data["E_reco_calo"][target_row] = sw_obj.Enu.calo
+                                    data["E_reco_lep_calo"][target_row] = sw_obj.Enu.lep_calo
+                                    data["E_reco_mu_range"][target_row] = sw_obj.Enu.mu_range
+                                    data["E_reco_mu_mcs"][target_row] = sw_obj.Enu.mu_mcs
+                                    data["E_reco_e_calo"][target_row] = sw_obj.Enu.e_calo
+                                    data["E_reco_regcnn"][target_row] = sw_obj.Enu.regcnn
+                                    data["reco_vtx_x"][target_row] = sw_obj.vtx.x
+                                    data["reco_vtx_y"][target_row] = sw_obj.vtx.y
+                                    data["reco_vtx_z"][target_row] = sw_obj.vtx.z
                                     data["truth_overlap"][target_row] = overlap
         tFile.Close()
 
@@ -273,7 +280,7 @@ elif mode == "particle":
                     data["pz"].append(p_obj.p.pz)
                     data["is_contained"].append(is_contained(p_obj.start_pos.x, p_obj.start_pos.y, p_obj.start_pos.z,
                                                            p_obj.end_pos.x, p_obj.end_pos.y, p_obj.end_pos.z, detector="TPC"))
-                    data["common_dlp_truth_overlap"].append(-1.0)
+                    data["common_truth_overlap"].append(-1.0)
                     data["reco_contained"].append(np.nan)
                     data["reco_pdg"].append(np.nan)
                     data["reco_px"].append(np.nan)
@@ -290,25 +297,28 @@ elif mode == "particle":
                     data["reco_end_y"].append(np.nan)
                     data["reco_end_z"].append(np.nan)
                     data["reco_length"].append(np.nan)
-                    data["nd_lar_dlp_truth_overlap"].append(-1.0)
+                    data["nd_lar_truth_overlap"].append(-1.0)
 
 
                 for k in range(mc.nu[j].nprim): add_truth_particle(mc.nu[j].prim[k], 1, k)
                 for k in range(mc.nu[j].nprefsi): add_truth_particle(mc.nu[j].prefsi[k], 2, k)
                 for k in range(mc.nu[j].nsec): add_truth_particle(mc.nu[j].sec[k], 3, k)
 
-            for inter_idx in range(common.ixn.ndlp):
-                interaction = common.ixn.dlp[inter_idx]
-                for p_idx in range(interaction.part.ndlp):
-                    reco_part = interaction.part.dlp[p_idx]
+            reco_sw_obj = getattr(common.ixn, reco_sw)
+            nreco_sw_obj = getattr(common.ixn, f"n{reco_sw}")
+            for inter_idx in range(nreco_sw_obj):
+                interaction = reco_sw_obj[inter_idx]
+                nreco_sw_part = getattr(interaction.part, f"n{reco_sw}")
+                for p_idx in range(nreco_sw_part):
+                    reco_part = getattr(interaction.part, reco_sw)[p_idx]
                     for l in range(len(reco_part.truth)):
                         t0 = reco_part.truth[l]
                         overlap = float(reco_part.truthOverlap[l])
                         key = (int(t0.ixn), int(t0.type), int(t0.part))
                         if key in truth_map:
                             target_row = truth_map[key]
-                            if overlap > data["common_dlp_truth_overlap"][target_row]:
-                                data["common_dlp_truth_overlap"][target_row] = overlap
+                            if overlap > data["common_truth_overlap"][target_row]:
+                                data["common_truth_overlap"][target_row] = overlap
                                 data["reco_contained"][target_row] = int(bool(reco_part.contained))
                                 data["reco_pdg"][target_row] = reco_part.pdg
                                 data["reco_px"][target_row] = reco_part.p.x
@@ -320,8 +330,10 @@ elif mode == "particle":
 
             if hasattr(nd, detector):
                 detector_obj = getattr(nd, detector)
-                for inter_idx in range(detector_obj.ndlp):
-                    interaction = detector_obj.dlp[inter_idx]
+                nreco_sw_det = getattr(detector_obj, f"n{reco_sw}")
+                reco_sw_det = getattr(detector_obj, reco_sw)
+                for inter_idx in range(nreco_sw_det):
+                    interaction = reco_sw_det[inter_idx]
                     for track_idx in range(interaction.ntracks):
                         tracks = interaction.tracks[track_idx]
                         for l in range(len(tracks.truth)):
@@ -330,8 +342,8 @@ elif mode == "particle":
                             key = (int(t0.ixn), int(t0.type), int(t0.part))
                             if key in truth_map:
                                 target_row = truth_map[key]
-                            if overlap > data["nd_lar_dlp_truth_overlap"][target_row]:
-                                data["nd_lar_dlp_truth_overlap"][target_row] = overlap
+                            if overlap > data["nd_lar_truth_overlap"][target_row]:
+                                data["nd_lar_truth_overlap"][target_row] = overlap
                                 data["reco_E"][target_row] = tracks.E
                                 data["reco_start_x"][target_row] = tracks.start.x
                                 data["reco_start_y"][target_row] = tracks.start.y
@@ -348,10 +360,10 @@ elif mode == "particle":
     data['E_kin_ratio_common'] = compute_E_kin_ratio(data, 'reco_E')
 
     df = pd.DataFrame(data)
-    df["common_dlp_truth_overlap"] = df["common_dlp_truth_overlap"].replace(-1.0, np.nan)
-    df["nd_lar_dlp_truth_overlap"] = df["nd_lar_dlp_truth_overlap"].replace(-1.0, np.nan)
-    df["reco_truth_overlap"] = df["common_dlp_truth_overlap"].copy()
-    df = df.drop(columns=['common_dlp_truth_overlap', 'nd_lar_dlp_truth_overlap'])
+    df["common_truth_overlap"] = df["common_truth_overlap"].replace(-1.0, np.nan)
+    df["nd_lar_truth_overlap"] = df["nd_lar_truth_overlap"].replace(-1.0, np.nan)
+    df["reco_truth_overlap"] = df["common_truth_overlap"].copy()
+    df = df.drop(columns=['common_truth_overlap', 'nd_lar_truth_overlap'])
     
 
     particle_cuts = config.get("particle_cuts")

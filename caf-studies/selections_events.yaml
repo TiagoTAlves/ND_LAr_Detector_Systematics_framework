@@ -3,7 +3,7 @@ caf:
   StandardRecordLibs: "/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/caf-studies/duneanaobj/"
   root_dir: "/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/input-root-files/CAF/run-cafmaker/MicroProdN4p1_NDComplex_FHC.caf.full.light.spineonly/CAF/0002000/"
   # root_file: "/vols/dune/tta20/mach3/ND_LAr_Detector_Systematics_framework/input-root-files/CAF/run-cafmaker/MicroProdN4p1_NDComplex_FHC.caf.full.light.spineonly/CAF/0002000/MicroProdN4p1_NDComplex_FHC.caf.full.light.spineonly.0002459.CAF.root"
-  
+  reco_sw: "pandora" # options: dlp | pandora
 event_cuts:
   # Use the names of the variables as defined in caf_read_yaml.py
   mc_nupdg: [-12,12]
@@ -24,5 +24,5 @@ event_cuts:
     max: 2
 
 output:
-  out_dir: "./outputs/cafs/event_selections/"
+  out_dir: "./outputs/cafs/event_selections"
   out_filename: "event_selection_test" # DO NOT END WITH .ROOT
