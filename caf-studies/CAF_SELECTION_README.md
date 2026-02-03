@@ -2,6 +2,20 @@
 
 This guide explains how to configure YAML files for selecting events or particles from CAF (Common Analysis Framework) ROOT files using `caf_read_yaml.py`. The script supports two modes: `event` and `particle`, each with specific cuts and output options.
 
+## Prerequisites
+
+- Python 3.8+
+
+Install dependencies with:
+```bash
+pip install -r ../requirements.txt
+```
+To make selection files you must clone the [duneanaobj](https://github.com/DUNE/duneanaobj) repository and then build it. This can be done very easily using the setup.sh bash script.
+
+```bash
+$ source setup.sh
+```
+
 ## General Structure
 
 All YAML files must include the following top-level keys:
