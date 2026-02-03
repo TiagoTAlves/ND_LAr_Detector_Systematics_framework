@@ -223,11 +223,13 @@ if mode == "event":
 
     df_filtered = apply_event_cuts(df, event_cuts)
     
-    output_dir = "outputs/cafs/neutrino"
+    output_dir = config.get("output", {}).get("out_dir", "./outputs")
+    output_filename = config.get("output", {}).get("out_filename", f"{config.get('event_cuts').get('mc_nupdg')}") + f"_event_chunk_{chunk_index}.root"
     os.makedirs(output_dir, exist_ok=True)
-    out_file = f"{output_dir}/neutrino_chunk_{chunk_index}.root"
+    out_file = f"{output_dir}/{output_filename}"
+
     with uproot.recreate(out_file) as f:
-        f["neutrino_tree"] = df_filtered
+        f["event_tree"] = df_filtered
     print(f"Saved to {out_file}")
 
 elif mode == "particle":
@@ -354,10 +356,12 @@ elif mode == "particle":
 
     particle_cuts = config.get("particle_cuts")
     df_filtered = apply_particle_cuts(df, particle_cuts)
+    
+    output_dir = config.get("output", {}).get("out_dir", "./outputs")
+    output_filename = config.get("output", {}).get("out_filename", f"{config.get('particle_cuts').get('pdg')}") + f"_particle_chunk_{chunk_index}.root"
 
-    output_dir = "outputs/cafs"
     os.makedirs(output_dir, exist_ok=True)
-    output_file = f"{output_dir}/particle/caf_{config['mode']}_{particle_cuts['pdg']}_output{'_chunk_'+str(chunk_index) if not interactive else ''}.root"
+    output_file = f"{output_dir}/{output_filename}"
 
     index_cols = ["ID", "idx", "part_idx"]
     if all(c in df_filtered.columns for c in index_cols):
